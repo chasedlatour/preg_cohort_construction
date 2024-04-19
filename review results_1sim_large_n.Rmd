@@ -1,0 +1,302 @@
+---
+title: "review results_1sim"
+author: "Chase Latour"
+date: "1/29/2024"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Call in the libraries that we need
+
+library(kableExtra)
+library(tidyverse)
+
+```
+
+# Overview
+
+This HTML file provides the results for our pregnancy simulation focusing on modeling late-pregnancy outcomes as competing events. 
+
+We intended to simulate the following clinical trial: pregnant individuals with mild-to-moderate chronic hypertension in pregnancy were entered into the trial at their 6th week of gestation (4th from conception). At trial entry, patients were randomized (1:1 ratio) to either initiate or not initiate antihypertensive pharmacotherapy. We then followed individuals until delivery or they were lost to follow-up. We were interested in a primary efficacy outcome (composite endpoint of fetal death or pre-delivery severe preeclampsia) and primary safety outcome (small-for-gestational age infant).
+
+To simulate this study, we discretized simulation at each gestational week. Specifically, we created 1,500,000 individuals who conceived. We then simulated their pregnancy outcomes at each gestational week for 42 weeks under the assumption of treatment and no treatment. The risk of fetal death and delivery depended upon the gestational week and treatment status. Individuals who did not experience fetal death prior to week 4 from conception (i.e., 6 from LMP) were included into the trial and randomized to initiate or not initiate antihypertensive pharmacotherapy. Observed outcomes were determined by a person's treatment value; their counter-factual outcomes were those outcomes they would have experienced if assigned to the treatment arm counter to the one they were actually assigned.
+
+Within each scenario, we analyzed results for the two outcomes using:
+
+- A Kaplan-Meier estimator where competing events were treated as censoring, 
+- An Aalen-Johansen estimator where competing events were part of a multinomial outcome,
+- Simple risk proportions using all simulated data (i.e., ignoring the censoring indicator), and 
+- Simple risk proportions using potential outcomes.
+
+We created 12 scenarios detailed in the table below. 
+
+```{r}
+
+# Data
+data <- data.frame(
+  Scenario = c("Scenario 1", "Scenario 2", "Scenario 3", "Scenario 4", "Scenario 5",
+               "Scenario 6", "Scenario 7", "Scenario 8", "Scenario 9", "Scenario 10",
+               "Scenario 11", "Scenario 12"),
+  Phase2_fd = c("Decreases risk of fetal death", "Increases risk of fetal death",
+                "No impact on risk of fetal death", "Decreases risk of fetal death",
+                "Increases risk of fetal death", "No impact on risk of fetal death",
+                "Decreases risk of fetal death", "Increases risk of fetal death",
+                "No impact on risk of fetal death", "Decreases risk of fetal death",
+                "Increases risk of fetal death", "No impact on risk of fetal death"),
+  Phase2_ga = c("Decreases risk of preterm birth", "See above", "See above",
+                "No effect on risk of preterm birth", "See above", "See above", 
+                "Decreases risk of preterm birth", "See above", "See above", 
+                "No effect on risk of preterm birth", "See above", "See above"),
+  Phase3 = c("Decreases risk of severe preeclampsia", "See above", "See above",
+             "See above", "See above", "See above", 
+             "Decreases risk of severe preeclampsia", "See above", "See above",
+             "See above", "See above", "See above"),
+  Phase4 = c("Decreases risk of small-for-gestational age", "See above",
+             "See above", 
+             "No effect on risk of small-for-gestational age",
+             "See above", "See above", 
+             "No effect on risk of small-for-gestational age", "See above",
+             "See above", 
+             "No effect on risk of small-for-gestational age", 
+             "See above", "See above")
+)
+
+# Print table
+data %>%
+  kable(col.names = c("Scenario", "Phase 2: Fetal death", 
+                      "Phase 2: Gestational age at live birth",
+                      "Phase 3: Severe preeclampsia",
+                      "Phase 4: Small-for-gestational age")) %>%
+    kable_classic() %>%
+    add_header_above(c(" " = 1, "Effect of Treatment on..." = 4))
+
+```
+
+# Pull In Data
+
+First, we pull in the RDS files in which the simulation results are stored.
+
+## Descriptive Data
+
+There are individual RDS files for the descriptive analyses of the simulated populations.
+
+```{r hide=TRUE}
+
+# Call in the data that we need
+s1 <- readRDS("describe trial_scenario1.rds") %>% 
+  mutate(Scenario = "Scenario 1")
+s2 <- readRDS("describe trial_scenario2.rds") %>% 
+  mutate(Scenario = "Scenario 2")
+s3 <- readRDS("describe trial_scenario3.rds") %>% 
+  mutate(Scenario = "Scenario 3")
+s4 <- readRDS("describe trial_scenario4.rds") %>% 
+  mutate(Scenario = "Scenario 4")
+s5 <- readRDS("describe trial_scenario5.rds") %>% 
+  mutate(Scenario = "Scenario 5")
+s6 <- readRDS("describe trial_scenario6.rds") %>% 
+  mutate(Scenario = "Scenario 6")
+s7 <- readRDS("describe trial_scenario7.rds") %>% 
+  mutate(Scenario = "Scenario 7")
+s8 <- readRDS("describe trial_scenario8.rds") %>% 
+  mutate(Scenario = "Scenario 8")
+s9 <- readRDS("describe trial_scenario9.rds") %>% 
+  mutate(Scenario = "Scenario 9")
+s10 <- readRDS("describe trial_scenario10.rds") %>% 
+  mutate(Scenario = "Scenario 10")
+s11 <- readRDS("describe trial_scenario11.rds") %>% 
+  mutate(Scenario = "Scenario 11")
+s12 <- readRDS("describe trial_scenario12.rds") %>% 
+  mutate(Scenario = "Scenario 12")
+
+# List of data frames
+dfs <- mget(paste0("s", 1:12))
+
+# Combine data frames using do.call and rbind
+combined_descriptive <- do.call(rbind, dfs)
+
+```
+
+## Analysis Data
+
+Analysis data are stored in separate RDS files for each scenario.
+
+```{r hide=TRUE}
+
+# Call in the data that we need
+s1 <- readRDS("analyses_scenario1.rds") %>% 
+  mutate(Scenario = "Scenario 1")
+s2 <- readRDS("analyses_scenario2.rds") %>% 
+  mutate(Scenario = "Scenario 2")
+s3 <- readRDS("analyses_scenario3.rds") %>% 
+  mutate(Scenario = "Scenario 3")
+s4 <- readRDS("analyses_scenario4.rds") %>% 
+  mutate(Scenario = "Scenario 4")
+s5 <- readRDS("analyses_scenario5.rds") %>% 
+  mutate(Scenario = "Scenario 5")
+s6 <- readRDS("analyses_scenario6.rds") %>% 
+  mutate(Scenario = "Scenario 6")
+s7 <- readRDS("analyses_scenario7.rds") %>% 
+  mutate(Scenario = "Scenario 7")
+s8 <- readRDS("analyses_scenario8.rds") %>% 
+  mutate(Scenario = "Scenario 8")
+s9 <- readRDS("analyses_scenario9.rds") %>% 
+  mutate(Scenario = "Scenario 9")
+s10 <- readRDS("analyses_scenario10.rds") %>% 
+  mutate(Scenario = "Scenario 10")
+s11 <- readRDS("analyses_scenario11.rds") %>% 
+  mutate(Scenario = "Scenario 11")
+s12 <- readRDS("analyses_scenario12.rds") %>% 
+  mutate(Scenario = "Scenario 12")
+
+# List of data frames
+dfs <- mget(paste0("s", 1:12))
+
+# Combine data frames using do.call and rbind
+combined_df <- do.call(rbind, dfs)
+
+# Function to replace the prefix for the AJ estimates for the composite outcome
+replace_prefix <- function(df, old_prefix, new_prefix) {
+  names(df) <- gsub(paste0("^", old_prefix), new_prefix, names(df))
+  return(df)
+}
+
+combined_df <- replace_prefix(combined_df, "composite_multi_gw", "aj_composite_")
+
+```
+
+## Functions
+
+We will use these functions to print out the analysis results for each of the outcomes.
+
+```{r}
+
+
+# Clean up the dataset according to outcome
+
+transform <- function(dset, var_name) {
+
+  # Transformations
+  dset2 <- dset %>%
+    mutate(
+      # Results from KM Estimator
+      km_r0 = round(!!sym(paste0("km_", var_name, "_ r_0")), 2),
+      km_r1 = round(!!sym(paste0("km_", var_name, "_ r_1")), 2),
+      km_rd = round(!!sym(paste0("km_", var_name, "_ rd")) * 100, 2),
+      km_rd_ci = paste0("(", round(!!sym(paste0("km_", var_name, "_ rd_lcl"))*100,2), ", ",
+                        round(!!sym(paste0("km_", var_name, "_ rd_ucl"))*100,2), ")"),
+      
+      # Results from AJ Estimator
+      aj_r0 = round(!!sym(paste0("aj_", var_name, "_ r_0")), 2),
+      aj_r1 = round(!!sym(paste0("aj_", var_name, "_ r_1")), 2),
+      aj_rd = round(!!sym(paste0("aj_", var_name, "_ rd")) * 100, 2),
+      aj_rd_ci = paste0("(", round(!!sym(paste0("aj_", var_name, "_ rd_lcl"))*100,2), ", ",
+                        round(!!sym(paste0("aj_", var_name, "_ rd_ucl"))*100, 2), ")"),
+      
+      # Results without censoring
+      no_censor_r0 = round(!!sym(paste0("no_censor_", var_name, "_ r_0")), 2),
+      no_censor_r1 = round(!!sym(paste0("no_censor_", var_name, "_ r_1")), 2),
+      no_censor_rd = round(!!sym(paste0("no_censor_", var_name, "_ rd")) * 100, 2),
+      no_censor_rd_ci = paste0("(", 
+                               round(!!sym(paste0("no_censor_", var_name, "_ rd_lcl"))*100, 2),
+                               ", ",
+                               round(!!sym(paste0("no_censor_", var_name, "_ rd_lcl"))*100, 2),
+                               ")")#,
+      
+      
+      
+    ) %>% 
+    rowwise() %>% 
+    mutate(
+      # Truth
+      truth_r0 = ifelse(var_name == "composite",
+                        round(!!sym(paste0("potential_ risk_", var_name, "_untrt")), 2),
+                        round(`potential_ risk_sga_untrt`, 2)),
+      truth_r1 = ifelse(var_name == "composite",
+                        round(!!sym(paste0("potential_ risk_", var_name, "_trt")), 2),
+                        round(`potential_ risk_sga_trt`, 2)),
+      truth_rd = ifelse(var_name == "composite",
+                        round(!!sym(paste0("potential_ rd_", var_name)) * 100, 2),
+                        round(`potential_ rd_sga` * 100, 2))
+    ) %>% 
+    ungroup() %>% 
+    select(c(Scenario, km_r0, km_r1, km_rd, km_rd_ci,
+             aj_r0, aj_r1, aj_rd, aj_rd_ci,
+             no_censor_r0, no_censor_r1, no_censor_rd, no_censor_rd_ci,
+             truth_r0, truth_r1, truth_rd)) %>%
+    kable(col.names = c("Scenario", "Risk|Untrt", "Risk|Trt", "RD", "RD 95% CI",
+                        "Risk|Untrt", "Risk|Trt", "RD", "RD 95% CI",
+                        "Risk|Untrt", "Risk|Trt", "RD", "RD 95% CI",
+                        "Risk|Untrt", "Risk|Trt", "RD")) %>%
+    kable_classic() %>%
+    add_header_above(c(" " = 1, "Kaplan-Meier" = 4, "Aalen-Johansen" = 4, "No Censoring" = 4,
+                       "Truth" = 3))
+  
+  return(dset2)
+}
+
+```
+
+# Results
+
+## Descriptive Results
+
+First, we describe the number of participants in each of the trials by treatment arm and the number of patients that were censored (i.e., lost to follow-up) in each arm. Of note, censoring was intended to be uninformative: everyone had a 1% probability of being censored each gestational week. However, a person was only marked as censored if their censoring occurred prior to an outcome.
+
+```{r}
+
+combined_descriptive %>% 
+  select(Scenario, trt, n_people, percent_n_by_trt, n_censor, percent_censor) %>% 
+  mutate(n = paste0(n_people, " (", percent_n_by_trt, "%)"),
+         cens = paste0(n_censor, " (", percent_censor, "%)")) %>% 
+  pivot_wider(id_cols = Scenario,
+              names_from = trt,
+              values_from = c(n, cens)) %>% 
+  kable(col.names = c("Scenario", "Non-Initiators", "Initiators", 
+                      "Non-Initiators", "Initiators")) %>%
+  kable_classic() %>%
+  add_header_above(c(" " = 1, "Number of People (% of Trial Population)" = 2,
+                     "Number of Censored Individuals (% of Trial Arm)" = 2))
+
+
+```
+
+## Composite Outcome Results
+
+Print out analysis results for the composite outcome.
+
+```{r}
+
+## Print out the kable 
+
+transform(combined_df, "composite")
+  
+
+```
+
+## SGA: All Competing Events
+
+Print out analysis results for the analyses where fetal death, SGA, and non-SGA delivery are all treated as an outcome state (i.e., censoring only occurs when someone is lost to follow-up).
+
+```{r}
+
+# Print out the kable
+
+transform(combined_df, "sga_all")
+
+
+```
+
+## SGA: Fetal Death Only as Competing Event
+
+Print out analysis results for the analyses where fetal death and SGA are treated as an outcome state but non-SGA deliveries are treated as censoring.
+
+```{r}
+
+transform(combined_df, "sga_fd")
+
+```
+
