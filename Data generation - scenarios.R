@@ -22,6 +22,20 @@ settings <- list(
 )
 
 
+################################
+# TESTING
+################################
+
+## Upload the parameter Excel files.
+potential_preg_untrt <- read_xlsx("Simulation Parameters.xlsx", sheet = "potential_preg_untrt")
+potential_preg_trt <- read_xlsx("Simulation Parameters.xlsx", sheet = "potential_preg_trt")
+potential_preec_untrt <- read_xlsx("Simulation Parameters.xlsx", sheet = "potential_preec_untrt")
+potential_preec_trt <- read_xlsx("Simulation Parameters.xlsx", sheet = "potential_preec_trt")
+revised_preg <- read_xlsx("Simulation Parameters.xlsx", sheet = "postpreec_preg")
+pnc_prob <- read_xlsx("Simulation Parameters.xlsx", sheet = "pnc_prob")
+
+# Generate the Data
+
 
 
 ################################
