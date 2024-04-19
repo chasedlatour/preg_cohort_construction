@@ -11,158 +11,105 @@
 #####################################################
 
 
+# Libraries that you need for these functions
+library(tidyverse)
+library(readxl)
+
+
 
 # This is the baseline function that will be 
 # -- used to generate each cohort.
 # This function will be run to generate a cohort 
 # -- for each simulation.
-each_sim <- function(n_sim, n){
+
+# Testing:
+n_sim <- 1
+n <- 150
+
+## Upload the parameter Excel files.
+potential_preg_untrt <- read_xlsx("Simulation Parameters.xlsx", 
+                                  sheet = "potential_preg_untrt")
+potential_preg_trt <- read_xlsx("Simulation Parameters.xlsx", 
+                                sheet = "potential_preg_trt")
+# phase2 <- read_xlsx("Simulation Parameters.xlsx", sheet = "Phase2")
+# phase3 <- read_xlsx("Simulation Parameters.xlsx", sheet = "Phase3")
+# phase4 <- read_xlsx("Simulation Parameters.xlsx", sheet = "Phase4")
+# phase5 <- read_xlsx("Simulation Parameters.xlsx", sheet = "Phase5")
+
+#each_sim <- function(n_sim, n){
   
+  # Per Morris et al. 2019, we save the random seed at the beginning of the simulation
   initial_seed <- list(.Random.seed)
-  
-  # Set the seed for the simulation as equal to n_sim.
-  #set.seed(n_sim)
-  # Decided that this should only be done once at the beginning of the simulation, per Morris et al. 2019
   
   # Generate 0 through 40 gestational weeks - 1 vector
   gw = list(seq(0,40, by = 1))
   
+  # Get the severity distribution from a multinomial random variable
+  # We assume that there is an equal distribution across three levels. 
+  # Otherwise, this needs to be modified.
+  severity_dist = rmultinom(n=1, size=n, prob=c(1/3, 1/3, 1/3))
+  
   # Create the dataset that going to output
   data <- dplyr::tibble(
     
-    sim_id = n_sim, # Simulation ID
+    # Simulation ID -- Only important if we simulate more than one simulation cohort
+    sim_id = n_sim, 
     
-    id = 1:n, # Each individual's ID
+    # Each individual's ID
+    id = 1:n, 
     
-    # Assign treatment here - doesn't matter when but efficient here
-    trt = rbinom(n=n, size=1, prob=0.5)
+    # Treatment needs to be assigned AFTER the cohort is selected. Otherwise,
+    # there is too much imbalance and don't get asymptotic convergence of true
+    # and observed treatment effect.
+    
+    # Assign a person's hypertension severity. 
+    severity = c(rep(0, as.numeric(severity_dist[1,1])), 
+                 rep(1, severity_dist[2,1]),
+                 rep(2, severity_dist[3,1]))
+    # 0 = Low, 1 = Moderate, 2 = High Severity
+    
     
   ) %>% 
     rowwise %>% 
     mutate(
       
-      #### PHASE 1
+      #### STEP 1: POTENTIAL PREGNANCY OUTCOMES
+      # Generate each patient's potential pregnancy outcomes at each 
+      # gestational week.
       
-      # Create the pregnancy outcomes for Phase 1 of the data generation
-      #phase1_outcomes = list(sample_outcomes_for_id(phase1)), 
-      phase1_outcomes = sample_outcomes_for_id(phase1), 
+      preg_outcomes_untrt = sample_outcomes_for_id(potential_preg_untrt, severity),
       
-      # Identify the last gestational week that a person experiences of pregnancy up to 20 weeks of gestation
-      # -- from LMP or 18 weeks from conception.
-      last_GA_pre18 = pre18(phase1_outcomes),
+      preg_outcomes_trt = sample_outcomes_for_id(potential_preg_trt, severity)
+      ) #, 
       
-      # Create the index outcomes for the trial
-      index_gw = list(rbinom(nrow(phase1), size=1, prob=phase1$p_index)),
-      
-      # Identify the first index event -- At least one should be 1 because
-      # -- Probability of index at week 20 is 1.
-      first_index = which(index_gw == 1)[1] - 1,
-      # Subtract 1 because we index at conception or week 0, and R indexes at 1
-      # The same was done for index_gw last_GA_pre20 in the function.
-      
-      # Create an indicator variable as to whether the patient actually
-      # -- enters the trial. If last_GA_pre20 < first_index, then they can't enter the trial.
-      trial_participant = (last_GA_pre18 >= 2) && (first_index <= last_GA_pre18),
-      # Use 2 here instead of 4 because from conception and not LMP.
-      
-      #### PHASE 2
-      
-      # Not going to subset to trial participants for now
-      # Generate pregnancy outcomes for phase2, focusing on those pregnancies that are treated
-      # phase2_outcomes = ifelse(trt == 0, # If untreated
-      #                          #I(list(phase1_outcomes)),
-      #                          list(phase1_outcomes),
-      #                          resample_outcomes(first_index, phase1_outcomes, phase2)),
-      
-      # Create all of the outcomes if they had been treated at the first_index
-      phase2_outcomes = resample_outcomes(first_index, phase1_outcomes, phase2),
-      
-      #### PHASE 3 -- determine whether a person developed preeclampsia & revised outcomes
-      
-      # Calculate their odds of preeclampsia from logistic regression
-      odds_preeclampsia = list(exp(phase3$ln_odds_preeclampsia + (phase3$treat_effect_ln_OR * trt))),
-      # Calculate the probability of preeclampsia
-      prob_preeclampsia = list(c(rep(0,25), odds_preeclampsia/(1+odds_preeclampsia))),
-      
-      # Use binomial r.v. to determine if someone has preeclampsia
-      preeclampsia_list = list(rbinom(length(prob_preeclampsia), size=1, prob=prob_preeclampsia)),
-      
-      # Determine the final pregnancy outcomes with preeclampsia timing 
-      ## These are outcomes if all were treated (i.e., potential outcomes)
-      final_pregnancy_outcomes_trt = list(preg_outcome(phase2_outcomes, preeclampsia_list, phase3)),
-      ## These are outcomes if all were untreated (i.e., potential outcomes)
-      final_pregnancy_outcomes_untrt = list(preg_outcome(phase1_outcomes, preeclampsia_list, phase3)),
-      
-      
-      ##### PHASE 4 -- Determine if people have SGA
-      ## These are outcomes if all were treated (i.e., potential outcomes)
-      sga_trt = sga_func(final_pregnancy_outcomes_trt, 1, phase4),
-      ## These are outcomes if all were untreated (i.e., potential outcomes)
-      sga_untrt = sga_func(final_pregnancy_outcomes_untrt, 0, phase4),
-      #sga = sga_func(final_pregnancy_outcomes, trt, phase4)
-      
-      
-      ##### PHASE 5 -- Censoring -- STILL NEED TO INCORPORATE THIS.
-      first_censoring_gw = censoring(phase5, first_index)
-      
-      
-      
-    ) %>% 
-    ungroup() %>% 
-    mutate(final_pregnancy_outcomes_trt = map(final_pregnancy_outcomes_trt, 
-                                              ~set_names(.x, str_c(names(.x), "_trt"))),
-           final_pregnancy_outcomes_untrt = map(final_pregnancy_outcomes_untrt, 
-                                                ~set_names(.x, str_c(names(.x), "_untrt")))) %>% 
-    unnest_wider(c(final_pregnancy_outcomes_trt, final_pregnancy_outcomes_untrt)) 
-  
-  finish_seed <- list(.Random.seed)
-  
-  ## Store the random states
-  data <- data %>% 
-    mutate(
-      start_seed = initial_seed,
-      end_seed = finish_seed
-    )
-  
-  # #Testing
-  # testtrt <- subset(data, sga_trt == 1)
-  # table(testtrt$preg_outcome_final_trt)
-  # testutrt <- subset(data, sga_untrt == 1)
-  # table(testutrt$preg_outcome_final_untrt)
-  
-  return(data)
-  
-}
-
-
-
-### Below, are all of the functions that will be used within the `each_sim()` function.
-
 
 
 # This function will create the pregnancy outcomes based upon the probabilities
 # -- recorded in phase1, phase2, phase3, and phase4.
-sample_outcomes_for_id <- function(data) {
-  #id_data <- subset(your_data, id == id)  # Filter data for the specific id
+sample_outcomes_for_id <- function(data, sev) {
   
+  # Subset to the severity level of interest
+  data2 <- subset(data, severity == sev)
+  # data2 <- subset(potential_preg_untrt, severity == 1)
+
   # Apply this function to each row of phase1-phase4 data where needed.
   # -- Create vector of 1:nrow(data) and then apply the function below
-  outcomes <- sapply(1:nrow(data), function(i) { 
-    
+  outcomes <- sapply(1:nrow(data2), function(i) {
+
     # Indicate the potential options to select from
     options <- c("fetaldeath_next", "livebirth_next", "contpreg_next")
-    
-    # Assign the probabilities to each of the potential pregnancy outcome options based upon 
+
+    # Assign the probabilities to each of the potential pregnancy outcome options based upon
     # -- the corresponding rows in the phase1-4 files.
-    probabilities <- data[i, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
-    
+    probabilities <- data2[i, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
+
     # Sample an option based on probabilities
     sampled_option <- sample(options, size = 1, prob = probabilities)
-    
+
     # Return that sampled option. This will be stored in the vector outcomes
     return(sampled_option)
   })
-  
+
   #list(outcomes = outcomes)
   return(list(outcomes))
 }
