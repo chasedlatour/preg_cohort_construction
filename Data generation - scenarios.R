@@ -36,6 +36,11 @@ pnc_prob <- read_xlsx("Simulation Parameters.xlsx", sheet = "pnc_prob")
 
 # Generate the Data
 
+# Specify the simulation settings
+all_outcomes <- generate(n_sim = 1, n = 1200)
+
+
+
 
 
 ################################
