@@ -14,12 +14,6 @@ library(readxl)
 # Pull in the data generation functions.
 source("Data generation functions.R")
 
-# Specify the required values for the simulation
-# These are the same across scenarios.
-n_sim <- 1
-settings <- list(
-  n = 1200 # 1.5 million
-)
 
 
 ################################
