@@ -13,6 +13,7 @@ library(readxl)
 
 # Pull in the data generation functions.
 source("Data generation functions.R")
+source("create cohort functions.R")
 
 
 
@@ -32,6 +33,8 @@ pnc_prob <- read_xlsx("Simulation Parameters.xlsx", sheet = "pnc_prob")
 
 # Specify the simulation settings
 all_outcomes <- generate(n_sim = 1, n = 1200)
+
+all_outcomes2 <- identify_key_vars(all_outcomes)
 
 
 

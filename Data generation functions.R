@@ -18,9 +18,6 @@ generate <- function(n_sim, n){
   # Per Morris et al. 2019, we save the random state at the beginning of the simulation
   initial_seed <- list(.Random.seed)
   
-  # Generate 0 through 40 gestational weeks - 1 vector
-  gw = list(seq(0,40, by = 1))
-  
   # Get the severity distribution from a multinomial random variable
   # We assume that there is an equal distribution across three levels. 
   # Otherwise, this needs to be modified.
@@ -34,6 +31,10 @@ generate <- function(n_sim, n){
     
     # Each individual's ID
     id = 1:n, 
+    
+    # Generate 0 through 40 gestational weeks - 1 vector
+    # This indexed prenatal care encounters, not outcomes. Outcomes are 1+ this.
+    pnc_gw = list(seq(0,40, by = 1)),
     
     # Treatment needs to be assigned AFTER the cohort is selected. Otherwise,
     # there is too much imbalance and don't get asymptotic convergence of true
