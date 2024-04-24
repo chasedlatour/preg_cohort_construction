@@ -8,30 +8,6 @@
 #####################################################
 
 
-#COMEBACK
-
-#### FUNCTION: create_study_samples_by_gw()
-# This function will identify study samples (prior to inducing missingness)
-# for each of the gestational weeks of PNC initiation.
-
-create_study_samples_by_gw <- function(dataset){
-  
-  sim_specific <- all_outcomes2 %>% 
-    select(sim_id, start_seed, end_seed) %>% 
-    ungroup() %>% 
-    group_by(sim_id, id) %>% 
-    summarize(start_seed = first(start_seed),
-              end_seed = first(end_seed),
-              .groups = 'drop')
-  
-  gw4 <- all_outcomes2 %>% 
-    filter(include_4wk) %>% 
-    select(sim_id, id, pnc_gw, severity, start_seed, end_seed, preeclampsia0,
-           final_preg0_t, final_preg0, include_4wk, treated_po_wk4, pnc_enc_wk4)
-  
-}
-
-
 #### FUNCTION: identify_key_vars()
 # This function will identify necessary values of key variables for each person
 identify_key_vars <- function(dataset){
@@ -73,7 +49,8 @@ identify_key_vars <- function(dataset){
                                      16))
       
     ) %>% 
-    unnest_wider(untreated_po)
+    unnest_wider(untreated_po) %>% 
+    create_study_samples_by_gw()
       
       
     return(data)
@@ -81,6 +58,47 @@ identify_key_vars <- function(dataset){
 }
 
 ### Some necessary helper functions
+
+
+#### FUNCTION: create_study_samples_by_gw()
+# This function will identify study samples (prior to inducing missingness)
+# for each of the gestational weeks of PNC initiation.
+
+create_study_samples_by_gw <- function(dataset){
+  
+  # Make a nested dataset for each of the cohorts
+  
+  gw4 <- dataset %>% 
+    filter(include_4wk) %>% 
+    select(-c(include_7wk, include_16wk, treated_po_wk7, 
+              treated_po_wk16, pnc_enc_wk7, pnc_enc_wk16)) %>% 
+    unnest_wider(treated_po_wk4) %>% 
+    nest(wk4 = -sim_id)
+  
+  gw7 <- dataset %>% 
+    filter(include_7wk) %>% 
+    select(-c(include_4wk, include_16wk, treated_po_wk4, 
+              treated_po_wk16, pnc_enc_wk4, pnc_enc_wk16)) %>% 
+    unnest_wider(treated_po_wk7) %>% 
+    nest(wk7 = -sim_id)
+  
+  gw16 <- dataset %>% 
+    filter(include_16wk) %>% 
+    select(-c(include_4wk, include_7wk, treated_po_wk4, 
+              treated_po_wk7, pnc_enc_wk4, pnc_enc_wk7)) %>% 
+    unnest_wider(treated_po_wk16) %>% 
+    nest(wk16 = -sim_id)
+  
+  # Left join these datasets on sim_id
+  sim <- left_join(gw4, gw7, by = 'sim_id') %>% 
+    left_join(gw16, by = 'sim_id')
+  
+  return(sim)
+  
+}
+
+
+
 
 ### FUNCTION: find_first_not_contpreg()
 # Find the first element of a preg outcomes list that 

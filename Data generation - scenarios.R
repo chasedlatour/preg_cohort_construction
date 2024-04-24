@@ -30,11 +30,11 @@ revised_preg <- read_xlsx("Simulation Parameters.xlsx", sheet = "postpreec_preg"
 pnc_prob <- read_xlsx("Simulation Parameters.xlsx", sheet = "pnc_prob")
 
 # Generate the Data
-
-# Specify the simulation settings
 all_outcomes <- generate(n_sim = 1, n = 1200)
 
+# Identify key variables and then output a dataset with 3 columns - one for each trial.
 all_outcomes2 <- identify_key_vars(all_outcomes)
+
 
 
 
