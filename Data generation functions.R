@@ -13,7 +13,18 @@
 # This is the baseline function that will be 
 # -- used to generate the potential outcomes
 # -- for each cohort.
-generate <- function(n_sim, n){
+
+# Inputs:
+# n_sim = simulation number (id)
+# n = number of individuals in a cohort/repetition
+# p_sev_beta = betas for the logistic regression for missingness
+#   due to disease severity -- c(beta0, beta1, beta2)
+
+n_sim <- 1
+n <- 100
+p_sev_beta <- c(-3, 0.1, 0.2)
+
+generate <- function(n_sim, n, p_sev_beta){
   
   # Per Morris et al. 2019, we save the random state at the beginning of the simulation
   initial_seed <- list(.Random.seed)
@@ -22,6 +33,13 @@ generate <- function(n_sim, n){
   # We assume that there is an equal distribution across three levels. 
   # Otherwise, this needs to be modified.
   severity_dist = rmultinom(n=1, size=n, prob=c(1/3, 1/3, 1/3))
+  
+  # Get the probabilities associated with the betas for each
+  # severity level
+  p_missing_sev <- c(logodds_to_p(p_sev_beta[1]),
+                     logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
+                     logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
+  
   
   # Create the dataset that going to output
   data <- dplyr::tibble(
@@ -45,6 +63,14 @@ generate <- function(n_sim, n){
                  rep(1, severity_dist[2,1]),
                  rep(2, severity_dist[3,1])),
     # 0 = Low, 1 = Moderate, 2 = High Severity
+    
+    # Generate missingness probabilities
+    p_missing_by_sev = p_missing_sev[severity+1],
+    
+    # Select missingness values for each person's gestational week
+    # manually input as 41
+    missingnes_by_sev = purrr::map(p_missing_by_sev, 
+                                   ~rbinom(41, 1, .x)),
     
     ##### GENERATE POTENTIAL PREGNANCY OUTCOMES
     
@@ -199,6 +225,27 @@ sample_pnc <- function(data, sev) {
 }
 
 
+### FUNCTION: logodds_to_p()
+# This function converts the log-odds into a
+# probability. Important for deriving probabilities
+# from the logit function.
+logodds_to_p <- function(logodds){
+  
+  p <- exp(logodds)/(1 + exp(logodds))
+  
+  return(p)
+  
+}
+
+
+### FUNCTION: sample_missing_by_sev()
+# This function is meant to sample missingness at
+# each gestational week by disease severity
+sample_missing_by_sev(probability){
+  
+  
+  
+}
 
 
 
