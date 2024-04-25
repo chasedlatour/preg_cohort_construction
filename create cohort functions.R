@@ -12,9 +12,10 @@
 # This function will identify necessary values of key variables for each person
 identify_key_vars <- function(dataset){
   
-  data <- all_outcomes %>% 
+  # REPLACE W DATASET WHEN DONE EDITING
+  data <- dataset %>% 
     dplyr::group_by(sim_id, id) %>% 
-    # rowwise() %>% 
+    #rowwise() %>% 
     dplyr::mutate(
       
       ######################################
@@ -23,6 +24,9 @@ identify_key_vars <- function(dataset){
       untreated_po = list(untreated_outcomes(unlist(preg_outcomes_untrt), 
                                              unlist(preec_outcomes_untrt), 
                                              unlist(revised_preg))),
+      
+      ######################################
+      ### Treated Potential Outcomes
       
       treated_po_wk4 = list(treated_outcomes(unlist(preg_outcomes_trt),
                                              unlist(preec_outcomes_trt),
@@ -39,6 +43,11 @@ identify_key_vars <- function(dataset){
                                              unlist(revised_preg),
                                              16)),
       
+      ######################################
+      ### Prenatal Encounters
+      ### Identify prenatal encounters after
+      ### the first.
+      
       pnc_enc_wk4 = list(revise_pnc(unlist(pnc_enc),
                                     4)),
       
@@ -46,7 +55,16 @@ identify_key_vars <- function(dataset){
                                     7)),
       
       pnc_enc_wk16 = list(revise_pnc(unlist(pnc_enc),
-                                     16))
+                                     16)),
+      
+      ######################################
+      ### Missing Indicators
+      
+      missing_sev_wk4 = purrr::map_dbl(missing_by_sev, ~first_missing_sev(.x, 4)),
+      
+      missing_sev_wk7 = purrr::map_dbl(missing_by_sev, ~first_missing_sev(.x, 7)),
+      
+      missing_sev_wk16 = purrr::map_dbl(missing_by_sev, ~first_missing_sev(.x, 16))
       
     ) %>% 
     unnest_wider(untreated_po) %>% 
@@ -71,21 +89,24 @@ create_study_samples_by_gw <- function(dataset){
   gw4 <- dataset %>% 
     filter(include_4wk) %>% 
     select(-c(include_7wk, include_16wk, treated_po_wk7, 
-              treated_po_wk16, pnc_enc_wk7, pnc_enc_wk16)) %>% 
+              treated_po_wk16, pnc_enc_wk7, pnc_enc_wk16,
+              missing_sev_wk7, missing_sev_wk16)) %>% 
     unnest_wider(treated_po_wk4) %>% 
     nest(wk4 = -sim_id)
   
   gw7 <- dataset %>% 
     filter(include_7wk) %>% 
     select(-c(include_4wk, include_16wk, treated_po_wk4, 
-              treated_po_wk16, pnc_enc_wk4, pnc_enc_wk16)) %>% 
+              treated_po_wk16, pnc_enc_wk4, pnc_enc_wk16,
+              missing_sev_wk4, missing_sev_wk16)) %>% 
     unnest_wider(treated_po_wk7) %>% 
     nest(wk7 = -sim_id)
   
   gw16 <- dataset %>% 
     filter(include_16wk) %>% 
     select(-c(include_4wk, include_7wk, treated_po_wk4, 
-              treated_po_wk7, pnc_enc_wk4, pnc_enc_wk7)) %>% 
+              treated_po_wk7, pnc_enc_wk4, pnc_enc_wk7,
+              missing_sev_wk4, missing_sev_wk7)) %>% 
     unnest_wider(treated_po_wk16) %>% 
     nest(wk16 = -sim_id)
   
@@ -134,7 +155,14 @@ find_first_not_contpreg_wk <- function(vec, wk) {
   idx <- which(vec != "contpreg_next")
   
   # First index of the first value greater than wk
-  index_greater_than_wk <- which(idx > wk-1)[1]
+  # This is indexed at a prenatal care visit at gestational week wk
+  # which is indexed by R as wk+1.
+  # We want to identify the first outcome that occurs after the first
+  # prenatal care encounter at gestational week wk or R index wk+1.
+  # Outcomes are determined the week prior to when they occur. Thus,
+  # we want the first outcome where it is determined at or after the 
+  # prenatal care visit (week+1). Thus, it needs to be greater than wk
+  index_greater_than_wk <- which(idx > wk)[1] #Previously: wk-1
   
   if (length(index_greater_than_wk) == 0) {
     return(NA)
@@ -277,6 +305,33 @@ revise_pnc <- function(pnc_encounters, wk){
   
 }
 
+
+### FUNCTION first_missing_sev()
+# This function is intended to identify the
+# first gestational week where the person
+# is LTFU due to hypertension severity.
+first_missing_sev <- function(missing_vec, gestwk){
+  
+  # Identify the instances where missing
+  ind <- which(missing_vec == 1)
+  
+  # Do not add one. Gestational week of the first
+  # pnc visit is indexed from week zero. However, the 
+  # vector itself is indexed by R from 1, not zero.
+  # Losses to follow-up occur the week after they were
+  # determined, aligning with the R indexing
+  #ind2 <- ind[ind > gestwk+1][1]
+  ind2 <- which(ind > gestwk)[1]
+  
+  if (length(ind2) == 0) {
+    return(NA)
+  } else {
+    # Do not subtract 1 because we assume that the loss to
+    # follow-up occurs the next (prior to anything else occurring that week)
+    return(ind[ind2])
+  }
+  
+}
 
 
 
