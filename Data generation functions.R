@@ -19,12 +19,15 @@
 # n = number of individuals in a cohort/repetition
 # p_sev_beta = betas for the logistic regression for missingness
 #   due to disease severity -- c(beta0, beta1, beta2)
+# p_trt_sev = vector of treatment probabilities by disease severity
+
 
 n_sim <- 1
 n <- 100
 p_sev_beta <- c(-3, 0.1, 0.2)
+p_trt_sev <- c(0.35, 0.50, 0.65)
 
-generate <- function(n_sim, n, p_sev_beta){
+generate <- function(n_sim, n, p_sev_beta, p_trt_sev){
   
   # Per Morris et al. 2019, we save the random state at the beginning of the simulation
   initial_seed <- list(.Random.seed)
@@ -63,6 +66,10 @@ generate <- function(n_sim, n, p_sev_beta){
                  rep(1, severity_dist[2,1]),
                  rep(2, severity_dist[3,1])),
     # 0 = Low, 1 = Moderate, 2 = High Severity
+    
+    # Assign a treatment probability to the person dependent upon
+    # their disease severity
+    p_trt = p_trt_sev[severity+1],
     
     # Generate missingness probabilities
     p_missing_by_sev = p_missing_sev[severity+1],

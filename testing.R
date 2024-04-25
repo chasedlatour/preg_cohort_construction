@@ -21,16 +21,27 @@ revised_preg <- read_xlsx("Simulation Parameters.xlsx", sheet = "postpreec_preg"
 pnc_prob <- read_xlsx("Simulation Parameters.xlsx", sheet = "pnc_prob")
 
 # Generate the Data
-all_outcomes <- generate(n_sim = 1, n = 1200, p_sev_beta = c(-3, 0.1, 0.2))
+all_outcomes <- generate(n_sim = 1, 
+                         n = 1200, 
+                         p_sev_beta = c(-3, 0.1, 0.2),
+                         p_trt_sev = c(0.35, 0.50, 0.65)
+                         )
 
 # Identify key variables and then output a dataset with 3 columns - one for each trial.
-all_outcomes2 <- identify_key_vars(all_outcomes)
+all_outcomes2 <- create_cohort(all_outcomes)
 
 
-### Look at how things look
+
+#####################################
+### Look at dataset summaries
+
 
 # Week 4
 wk4 <- all_outcomes2[[2]][[1]]
+# Week 7
+wk7 <- all_outcomes2[[3]][[1]]
+# Week 16
+wk16 <- all_outcomes2[[4]][[1]]
 
 wk4_sum <- wk4 %>% 
   ungroup() %>% 
@@ -56,5 +67,9 @@ View(wk4_sum)
 hist(wk4$final_preg0_t)
 
 hist(wk4$final_preg1_t)
+
+# Look at the distribution of treatment
+table(wk4$trt)
+table(wk4$trt, wk4$severity)
 
 
