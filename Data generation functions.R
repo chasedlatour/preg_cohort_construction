@@ -104,7 +104,7 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
     ##### GENERATE PNC ENCOUNTERS -- Step 7
     
     # Indexing prenatal encounter
-    pnc_wk = sample(x = c("wk6","wk9","wk18"), size = n, prob = p_indx_pnc, replace = TRUE),
+    pnc_wk = sample(x = c(4, 7, 16), size = n, prob = p_indx_pnc, replace = TRUE),
     
     # List of indicator variables for PNC encounters
     pnc_enc = purrr::map(severity, ~sample_pnc(pnc_prob, .x))
