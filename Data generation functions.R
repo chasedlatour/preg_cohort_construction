@@ -20,14 +20,16 @@
 # p_sev_beta = betas for the logistic regression for missingness
 #   due to disease severity -- c(beta0, beta1, beta2)
 # p_trt_sev = vector of treatment probabilities by disease severity
+# p_indx_pnc = vector of probabilities for week of indexing prenatal care visit (6, 9, 16)
 
 
 n_sim <- 1
 n <- 100
 p_sev_beta <- c(-3, 0.1, 0.2)
 p_trt_sev <- c(0.35, 0.50, 0.65)
+p_indx_pnc <- c(0.25, 0.375, 0.375) # Think about what these probabilities should be -- likely just want reasonable distribution
 
-generate <- function(n_sim, n, p_sev_beta, p_trt_sev){
+generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
   
   # Per Morris et al. 2019, we save the random state at the beginning of the simulation
   initial_seed <- list(.Random.seed)
@@ -101,6 +103,10 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev){
     
     ##### GENERATE PNC ENCOUNTERS -- Step 7
     
+    # Indexing prenatal encounter
+    pnc_wk = sample(x = c("wk6","wk9","wk18"), size = n, prob = p_indx_pnc, replace = TRUE),
+    
+    # List of indicator variables for PNC encounters
     pnc_enc = purrr::map(severity, ~sample_pnc(pnc_prob, .x))
     
   )

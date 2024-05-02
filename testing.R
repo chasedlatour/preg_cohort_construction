@@ -24,7 +24,8 @@ pnc_prob <- read_xlsx("Simulation Parameters.xlsx", sheet = "pnc_prob")
 all_outcomes <- generate(n_sim = 1, 
                          n = 1200, 
                          p_sev_beta = c(-3, 0.1, 0.2),
-                         p_trt_sev = c(0.35, 0.50, 0.65)
+                         p_trt_sev = c(0.35, 0.50, 0.65),
+                         p_indx_pnc = c(0.25, 0.375, 0.375)
                          )
 
 # Identify key variables and then output a dataset with 3 columns - one for each trial.
