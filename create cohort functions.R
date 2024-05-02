@@ -23,59 +23,37 @@ create_cohort <- function(dataset){
       
       untreated_po = list(untreated_outcomes(unlist(preg_outcomes_untrt), 
                                              unlist(preec_outcomes_untrt), 
-                                             unlist(revised_preg))),
+                                             unlist(revised_preg),
+                                             pnc_wk)),
       
       ######################################
       ### Treated Potential Outcomes
       
-      treated_po_wk4 = list(treated_outcomes(unlist(preg_outcomes_trt),
-                                             unlist(preec_outcomes_trt),
+      treated_po = list(treated_outcomes(unlist(preg_outcomes_trt),
+                                         unlist(preec_outcomes_trt),
                                              unlist(revised_preg),
-                                             4)),
-      
-      treated_po_wk7 = list(treated_outcomes(unlist(preg_outcomes_trt),
-                                             unlist(preec_outcomes_trt),
-                                             unlist(revised_preg),
-                                             7)),
-      
-      treated_po_wk16 = list(treated_outcomes(unlist(preg_outcomes_trt),
-                                             unlist(preec_outcomes_trt),
-                                             unlist(revised_preg),
-                                             16)),
+                                             pnc_wk)), 
       
       ######################################
       ### Prenatal Encounters
       ### Identify prenatal encounters after
       ### the first.
       
-      pnc_enc_wk4 = list(revise_pnc(unlist(pnc_enc),
-                                    4)),
-      
-      pnc_enc_wk7 = list(revise_pnc(unlist(pnc_enc),
-                                    7)),
-      
-      pnc_enc_wk16 = list(revise_pnc(unlist(pnc_enc),
-                                     16)),
+      # Need to map in two values from the tibble.
+      pnc_enc_rev = list(revise_pnc(unlist(pnc_enc),
+                                    pnc_wk)) ,
+
       
       ######################################
       ### Missing Indicators
       
-      missing_sev_wk4 = purrr::map_dbl(missing_by_sev, ~first_missing_sev(.x, 4)),
-      
-      missing_sev_wk7 = purrr::map_dbl(missing_by_sev, ~first_missing_sev(.x, 7)),
-      
-      missing_sev_wk16 = purrr::map_dbl(missing_by_sev, ~first_missing_sev(.x, 16))
-      
+      missing_sev = first_missing_sev(unlist(missing_by_sev),
+                                      pnc_wk),
     ) %>% 
-    unnest_wider(untreated_po) %>% 
-    create_study_samples_by_gw() %>% 
-    # Assign treatment to each
-    mutate(
-      wk4 = purrr::map(wk4, ~assign_trt(.x)),
-      wk7 = purrr::map(wk7, ~assign_trt(.x)),
-      wk16 = purrr::map(wk16, ~assign_trt(.x))
-    )
+    unnest_wider(c(untreated_po, treated_po)) 
       
+  # Assign the treatment values among those where include ne 0
+  data2 <- assign_trt(subset(data, include != 0))
       
     return(data)
   
@@ -182,7 +160,7 @@ find_first_not_contpreg_wk <- function(vec, wk) {
 #### FUNCTION: untreated_outcomes()
 # This function the untreated
 # potential outcomes
-untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outcomes){
+untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outcomes, pnc_wk){
   
   ## Find the first pregnancy outcome
   # Gestational week that the outcome occurred (i.e., 1 + selected week)
@@ -211,12 +189,24 @@ untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_out
   
   final_preg = gsub("_next", "", final_preg)
   
+  # Old indicator variables
+  # include_4wk = final_preg_t > 4 
+  # include_7wk = final_preg_t > 7
+  # include_16wk = final_preg_t > 16
+  
   # Determine if the person would be indexed into the cohort at 4, 7, 
   # and 16 weeks of gestation -- A person had to NOT have had a fetal
   # death prior to that gestational week to be included
-  include_4wk = final_preg_t > 4 
-  include_7wk = final_preg_t > 7
-  include_16wk = final_preg_t > 16
+  # Make an indicator variable for if they should be included
+  if (final_preg_t > 4  & pnc_wk == 4){
+    include = 4
+  } else if (final_preg_t > 7 & pnc_wk == 7){
+    include = 7
+  } else if (final_preg_t > 16 & pnc_wk == 16){
+    include = 16
+  } else{
+    include = 0
+  }
   # Don't need to change the indexes with +/- 1 here because outcomes already indexed
   # up with the R vectors.
   
@@ -226,9 +216,7 @@ untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_out
     preeclampsia0 = preeclampsia,
     final_preg0_t = final_preg_t,
     final_preg0 = final_preg,
-    include_4wk = include_4wk,
-    include_7wk = include_7wk,
-    include_16wk = include_16wk
+    include = include # Inclusion variable indicator
   )
   
 }
@@ -305,9 +293,13 @@ revise_pnc <- function(pnc_encounters, wk){
   
   # Adding 1 because out gestweeks start at 0  in the Excel file
   # -- So, wk=7 in the R indexing aligns with gestwk 6 in the Excel file
-  wk_plus <- pnc_encounters[wk+1:n]
+  wk_plus <- pnc_encounters[(wk+1):n]
   
-  return(c(pre_wk, wk_plus))
+  # Revised
+  # return(c(pre_wk, wk_plus))
+  list(
+    c(pre_wk, wk_plus)
+    )
   
 }
 
