@@ -28,8 +28,10 @@ all_outcomes <- generate(n_sim = 1,
                          p_indx_pnc = c(0.25, 0.375, 0.375)
                          )
 
+p_miss_outcome <- c(0.2, -0.2)
+
 # Identify key variables and then output a dataset with 3 columns - one for each trial.
-all_outcomes2 <- create_cohort(all_outcomes)
+all_outcomes2 <- create_cohort(all_outcomes, p_miss_outcome)
 
 
 

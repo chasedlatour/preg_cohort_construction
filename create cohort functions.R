@@ -10,7 +10,12 @@
 
 #### FUNCTION: identify_key_vars()
 # This function will identify necessary values of key variables for each person
-create_cohort <- function(dataset){
+# 
+# INPUT:
+# dataset - data generated from the function generate()
+# p_miss_outcome - vector of gamma 0 and gamma 1 for the missing preg outcomes according to outcome
+
+create_cohort <- function(dataset, p_miss_outcome){
   
   # REPLACE W DATASET WHEN DONE EDITING
   data <- all_outcomes %>% 
@@ -47,15 +52,50 @@ create_cohort <- function(dataset){
       ######################################
       ### Missing Indicators
       
-      missing_sev = first_missing_sev(unlist(missing_by_sev),
+      ltfu_sev = first_missing_sev(unlist(missing_by_sev),
                                       pnc_wk),
     ) %>% 
     unnest_wider(c(untreated_po, treated_po)) 
       
   # Assign the treatment values among those where include ne 0
-  data2 <- assign_trt(subset(data, include != 0))
+  data2 <- assign_trt(subset(data, include != 0)) %>% 
+    # Create variables for the observed outcomes - ignore missingness at this stage
+    mutate(preeclampsia_pre_miss = ifelse(trt == 0,
+                                          preeclampsia0,
+                                          preeclampsia1),
+           pregout_pre_miss = ifelse(trt == 0,
+                                     final_preg0,
+                                     final_preg1),
+           pregout_t_pre_miss = ifelse(trt == 0,
+                                       final_preg0_t,
+                                       final_preg1_t)) %>% 
+    # Now determine if missing outcome based upon outcome and gw of outcome
+    mutate(p_out_ltfu = ifelse(pregout_pre_miss == 'fetaldeath' & 
+                                 pregout_t_pre_miss < 20,
+                               logodds_to_p(p_miss_outcome[1] + 
+                                              (pregout_t_pre_miss * 
+                                                 p_miss_outcome[2])),
+                               0))
+  
+  # Assign an indicator for if someone is LTFU  due to their true outcome value
+  data3 <- assign_out_ltfu(data2) %>% 
+    ## Create an indicator variable for if the person was LTFU and how
+    # -- This would occur if either:
+    # -- - ltfu_sev is not missing and less than or equal to pregout_t_pre_miss, OR
+    # -- - ltfu_out is equal to 1
+    mutate(ltfu = ifelse(ltfu_out == 1 & (is.na(ltfu_sev) || ltfu_sev > pregout_t_pre_miss),
+                         "out",
+                         ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
+                                "sev",
+                                "not"))) %>% 
+    # Now determine timing when LTFU
+    mutate(t_ltfu = pnc_miss(unlist(pnc_enc_rev),
+                             ltfu,
+                             pregout_t_pre_miss,
+                             ltfu_sev))
+    ### CHASE -- RUN SOME SUMMARIES OF EACH OF THESE DATASETS TO MAKE SURE THEY LOOK AS EXPECTED
       
-    return(data)
+    return(data3)
   
 }
 
@@ -318,7 +358,6 @@ first_missing_sev <- function(missing_vec, gestwk){
   # vector itself is indexed by R from 1, not zero.
   # Losses to follow-up occur the week after they were
   # determined, aligning with the R indexing
-  #ind2 <- ind[ind > gestwk+1][1]
   ind2 <- which(ind > gestwk)[1]
   
   if (length(ind2) == 0) {
@@ -360,3 +399,72 @@ assign_trt <- function(dataset){
 }
 
 
+
+### FUNCTION: logodds_to_p()
+# This function converts the log-odds into a
+# probability. Important for deriving probabilities
+# from the logit function.
+logodds_to_p <- function(logodds){
+  
+  p <- exp(logodds)/(1 + exp(logodds))
+  
+  return(p)
+  
+}
+
+
+
+### FUNCTION: assign_out_ltfu()
+# This function takes the vector of probabilities
+# of being LTFU due to an outcome and 
+# assigns a censoring indicator to each person in 
+# a cohort dependent upon that probability.
+# This is only done for observed outcomes.
+
+assign_out_ltfu <- function(dataset){
+  
+  # Pull out the p_trt vector
+  p_ltfu <- dataset$p_out_ltfu
+  
+  # Generate treatments
+  ltfu_out <- rbinom(n = length(p_ltfu),
+                     size = 1,
+                     prob = p_ltfu)
+  
+  dataset$ltfu_out <- ltfu_out
+  
+  return(dataset)
+  
+}
+
+
+
+### FUNCTION: pnc_miss()
+# This function takes a vector of PNC encounters 
+# and the ltfu indicator and determines the timing
+# of the most recent PNC.
+# Someone will be LTFU at their last PNC encounter
+# PRIOR to that indicator.
+pnc_miss <- function(pnc_enc, ltfu_ind, t_preg_out, t_sev){
+  
+  # Identify the gw of PNC encounters
+  # Need to subtract 1 because LTFU due to sev and 
+  # LTFU due to outcome are occurring the week after
+  # they are determined.
+  # However, we want the last PNC BEFORE that visit.
+  # Thus, need to subtract 1.
+  which1 <- which(pnc_enc == 1) - 1
+  
+  if(ltfu_ind == "out"){
+    subset <- which1[which1 < t_preg_out]
+    last_pnc <- last(subset)
+  } else if (ltfu_ind == "sev"){
+    subset <- which1[which1 < t_sev]
+    last_pnc <- last(subset)
+  } else {
+    last_pnc <- NA
+  }
+  
+  return(last_pnc)
+  
+}

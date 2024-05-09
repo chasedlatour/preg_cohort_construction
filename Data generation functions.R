@@ -78,8 +78,8 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
     
     # Select missingness values for each person's gestational week
     # manually input as 41
-    missing_by_sev = purrr::map(p_missing_by_sev, 
-                                   ~rbinom(41, 1, .x)),
+    missing_by_sev = purrr::map(p_missing_by_sev,
+                          ~rbinom(41, 1, .x)),
     
     ##### GENERATE POTENTIAL PREGNANCY OUTCOMES
     
