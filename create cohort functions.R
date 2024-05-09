@@ -15,10 +15,12 @@
 # dataset - data generated from the function generate()
 # p_miss_outcome - vector of gamma 0 and gamma 1 for the missing preg outcomes according to outcome
 
+
+### CHASE -- RUN SOME SUMMARIES OF EACH OF THESE DATASETS TO MAKE SURE THEY LOOK AS EXPECTED
+
 create_cohort <- function(dataset, p_miss_outcome){
   
-  # REPLACE W DATASET WHEN DONE EDITING
-  data <- all_outcomes %>% 
+  data <- dataset # all_outcomes %>% 
     dplyr::group_by(sim_id, id) %>% 
     #rowwise() %>% 
     dplyr::mutate(
@@ -92,8 +94,18 @@ create_cohort <- function(dataset, p_miss_outcome){
     mutate(t_ltfu = pnc_miss(unlist(pnc_enc_rev),
                              ltfu,
                              pregout_t_pre_miss,
-                             ltfu_sev))
-    ### CHASE -- RUN SOME SUMMARIES OF EACH OF THESE DATASETS TO MAKE SURE THEY LOOK AS EXPECTED
+                             ltfu_sev)) %>% 
+    # Finally, create their observed outcomes, incorporating the LTFU
+    mutate(preeclampsia = ifelse(ltfu != 'not',
+                                 0,
+                                 preeclampsia_pre_miss),
+           pregout = ifelse(ltfu != 'not',
+                            'unknown',
+                            pregout_pre_miss),
+           pregout_t = ifelse(ltfu != 'not',
+                              t_ltfu,
+                              pregout_t_pre_miss))
+    # NOTE: Analysis problem to deal with -- some censored on the day that they are randomized. Will likely need to add a small constant to all times. Check with Jess.
       
     return(data3)
   
