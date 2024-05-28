@@ -87,9 +87,22 @@ data <- readRDS('DGM - Abortion08Preeclampsia08.rds')
 beta12 <- 0.01
 gamma0 <- 0.1
 gamma1 <- 0.001
-save_name_cohort <- "ab08preec08_beta001_gamma01_001_cohort.rds"
+save_name_cohort <- "ab08preec08_beta001_gamma01_001.rds"
 
 set.seed(1234) # Same seed throughout
 generate_cohort(data, b0_sev, beta12, gamma0, gamma1, save_name_cohort)
 
+
+
+
+
+#### Missing: Beta1 = 0.05, Gamma0 = 0.1, Gamma1 = 0.02
+
+beta12 <- 0.05
+gamma0 <- 0.1
+gamma1 <- 0.02
+save_name_cohort <- "ab08preec08_beta005_gamma01_002.rds"
+
+set.seed(1234) # Same seed throughout
+generate_cohort(data, b0_sev, beta12, gamma0, gamma1, save_name_cohort)
 

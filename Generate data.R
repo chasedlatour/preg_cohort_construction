@@ -43,7 +43,7 @@ generate_dgm <- function(param_file, save_name_gen,
   ## Create the parameter list
   params_list_gen <- list(
     n_sim = 1,
-    n = 1200,
+    n = 5000, #1200,
     p_trt_sev = c(0.35, 0.50, 0.65),
     p_indx_pnc = c(0.25, 0.375, 0.375),
     potential_preg_trt = potential_preg_trt,

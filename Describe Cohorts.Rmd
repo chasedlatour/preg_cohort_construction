@@ -1,0 +1,60 @@
+---
+title: "Describe Cohorts"
+author: "Chase Latour"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+The goal of this program is to describe the pregnancy cohorts created for each analytic dataset.
+
+First, we must read in the necessary data files. 
+
+```{r}
+
+## Trt-Abortion = 0.8, -Preec = 0.8
+
+#### Missing: Beta1 = 0.01, Gamma0 = 0.1, Gamma1 = 0.001
+test <- readRDS("ab08preec08_beta001_gamma01_001.rds")
+
+#### Missing: Beta1 = 0.05, Gamma0 = 0.1, Gamma1 = 0.02
+test <- readRDS("ab08preec08_beta005_gamma01_002.rds")
+
+
+```
+
+## Summary Statistics, Ignoring Missingness
+
+```{r}
+
+# Focus on MAR + MNAR for now
+test %>% 
+  group_by(trt, severity) %>% 
+  summarize(
+    n = n(),
+    # Distribution of outcomes
+    n_miscarriage_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20),
+    n_stillbirth_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20),
+    n_livebirth_all = sum(pregout_pre_miss == "livebirth"),
+    # Distribution of observed outcomes
+    n_miscarriage_obs = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20 & ltfu_mar_mnar == "not"),
+    n_stillbirth_obs = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20 & ltfu_mar_mnar == "not"),
+    n_livebirth_obs = sum(pregout_pre_miss == "livebirth" & ltfu_mar_mnar == "not"),
+    # Distribution by first pnc encounter
+    n_pnc_4 = sum(pnc_wk == 4),
+    n_pnc_7 = sum(pnc_wk == 7),
+    n_pnc_16 = sum(pnc_wk == 16),
+    .groups = 'keep'
+  )
+
+## QUESTION -- IS IT IMPOSSIBLE TO HAVE AN OUTCOME AT 20 WEEKS OF GESTATION?? CHECK THIS -- SURPRISED SEE NONE.
+## Seeing no stillbirths in trt'd in highest severity - make sure that there's not a systematic reason for that.
+# Should severity influence the timing of the first PNC encounter? Feels like a bit too much to do.
+
+```
+
