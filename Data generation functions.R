@@ -22,16 +22,17 @@
 # p_trt_sev = vector of treatment probabilities by disease severity
 # p_indx_pnc = vector of probabilities for week of indexing prenatal care visit (6, 9, 16)
 
+# Testing
 
-n_sim <- 1
-n <- 100
-p_sev_beta <- c(-3, 0.1, 0.2)
-p_trt_sev <- c(0.35, 0.50, 0.65)
-p_indx_pnc <- c(0.25, 0.375, 0.375) # Think about what these probabilities should be -- likely just want reasonable distribution
+# n_sim <- 1
+# n <- 100
+# p_sev_beta <- c(-3, 0.1, 0.2)
+# p_trt_sev <- c(0.35, 0.50, 0.65)
+# p_indx_pnc <- c(0.25, 0.375, 0.375) # Think about what these probabilities should be -- likely just want reasonable distribution
 
 generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
   
-  # Per Morris et al. 2019, we save the random state at the beginning of the simulation
+  # Per Morris et al. 2019. Save the random state at the beginning of the simulation in case want it later.
   initial_seed <- list(.Random.seed)
   
   # Get the severity distribution from a multinomial random variable
@@ -40,11 +41,13 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
   severity_dist = rmultinom(n=1, size=n, prob=c(1/3, 1/3, 1/3))
   
   # Get the probabilities associated with the betas for each
-  # severity level
+  # severity level - calculated via logistic regression
   p_missing_sev <- c(logodds_to_p(p_sev_beta[1]),
                      logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
                      logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
   
+  
+  ######## GENERATE PEOPLE AND BASELINE VALUES
   
   # Create the dataset that going to output
   data <- dplyr::tibble(
@@ -56,12 +59,13 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
     id = 1:n, 
     
     # Generate 0 through 40 gestational weeks - 1 vector
-    # This indexed prenatal care encounters, not outcomes. Outcomes are 1+ this.
+    # This indexed prenatal care encounters, not outcomes. Outcomes occur at 1+ this.
+    # Note: R indexes vectors from 1, not 0, as we have done for these gestational weeks
     pnc_gw = list(seq(0,40, by = 1)),
     
     # Treatment needs to be assigned AFTER the cohort is selected. Otherwise,
     # there is too much imbalance and don't get asymptotic convergence of true
-    # and observed treatment effect.
+    # and observed treatment effect. -- Thus, done later.
     
     # Assign a person's hypertension severity. 
     severity = c(rep(0, as.numeric(severity_dist[1,1])), 
@@ -71,15 +75,16 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
     
     # Assign a treatment probability to the person dependent upon
     # their disease severity
+    # Severity indexed as 0, 1, 2, but R indexes vectors from 1. Thus, added 1
     p_trt = p_trt_sev[severity+1],
     
-    # Generate missingness probabilities
+    # Generate missingness probabilities for each person
     p_missing_by_sev = p_missing_sev[severity+1],
     
     # Select missingness values for each person's gestational week
     # manually input as 41
     missing_by_sev = purrr::map(p_missing_by_sev,
-                          ~rbinom(41, 1, .x)),
+                                ~rbinom(41, 1, .x)),
     
     ##### GENERATE POTENTIAL PREGNANCY OUTCOMES
     
@@ -103,10 +108,11 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
     
     ##### GENERATE PNC ENCOUNTERS -- Step 7
     
-    # Indexing prenatal encounter
+    # Determine gestational week of indexing prenatal encounter
     pnc_wk = sample(x = c(4, 7, 16), size = n, prob = p_indx_pnc, replace = TRUE),
     
     # List of indicator variables for PNC encounters
+    # We incorporate indexing prenatal encounter later
     pnc_enc = purrr::map(severity, ~sample_pnc(pnc_prob, .x))
     
   )
@@ -114,7 +120,7 @@ generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
   # Final random state
   finish_seed <- list(.Random.seed)
   
-  ## Store the random states
+  ## Store the random states in the final dataset.
   data <- data %>% 
     mutate(
       start_seed = initial_seed,

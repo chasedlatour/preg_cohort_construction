@@ -28,6 +28,9 @@ all_outcomes <- generate(n_sim = 1,
                          p_indx_pnc = c(0.25, 0.375, 0.375)
                          )
 
+## We will want to save this dataset. Will be important for bootstrapping for SEs
+
+# Betas for missingness dependent upon the pregnancy outcome
 p_miss_outcome <- c(0.2, -0.2)
 
 # Identify key variables and then output a dataset with 3 columns - one for each trial.

@@ -20,7 +20,7 @@
 
 create_cohort <- function(dataset, p_miss_outcome){
   
-  data <- dataset # all_outcomes %>% 
+  data <- dataset %>% # all_outcomes 
     dplyr::group_by(sim_id, id) %>% 
     #rowwise() %>% 
     dplyr::mutate(
@@ -105,7 +105,7 @@ create_cohort <- function(dataset, p_miss_outcome){
            pregout_t = ifelse(ltfu != 'not',
                               t_ltfu,
                               pregout_t_pre_miss))
-    # NOTE: Analysis problem to deal with -- some censored on the day that they are randomized. Will likely need to add a small constant to all times. Check with Jess.
+    # NOTE: Analysis problem to deal with -- some censored on the day that they are randomized (i.e., they have their indexing encounter and then never come back). Will likely need to add a small constant to all times. Check with Jess.
       
     return(data3)
   
