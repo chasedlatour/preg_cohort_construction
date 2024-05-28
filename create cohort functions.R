@@ -8,19 +8,15 @@
 #####################################################
 
 
-#### FUNCTION: identify_key_vars()
-# This function will identify necessary values of key variables for each person
-# 
-# INPUT:
-# dataset - data generated from the function generate()
-# p_miss_outcome - vector of gamma 0 and gamma 1 for the missing preg outcomes according to outcome
 
+#####################################################
+# FUNCTION: create_cohort()
+# PURPOSE: This function takes the raw generated DGM
+# data and imposes on it the missingness, assigns trt,
+# and then creates analytic cohorts from the raw data.
+#####################################################
 
 ### CHASE -- RUN SOME SUMMARIES OF EACH OF THESE DATASETS TO MAKE SURE THEY LOOK AS EXPECTED
-
-# REVISED
-
-
 create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
   
   # Get the probabilities associated with the betas for each
@@ -129,27 +125,27 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
                                  41, # Just set as a constant because ignoring missingness due to outcome
                                  ltfu_sev),
            t_ltfu_mar_mnar = pnc_miss(unlist(pnc_enc_rev),
-                                      ltfu,
+                                      ltfu_mar_mnar,
                                       pregout_t_pre_miss,
                                       ltfu_sev)) %>% 
     # Finally, create their observed outcomes, incorporating the LTFU
-    mutate(preeclampsia_mar = ifelse(ltfu != 'not',
+    mutate(preeclampsia_mar = ifelse(ltfu_mar != 'not',
                                      0,
                                      preeclampsia_pre_miss),
-           pregout_mar = ifelse(ltfu != 'not',
+           pregout_mar = ifelse(ltfu_mar != 'not',
                                 'unknown',
                                 pregout_pre_miss),
-           pregout_t_mar = ifelse(ltfu != 'not',
-                                  t_ltfu,
+           pregout_t_mar = ifelse(ltfu_mar != 'not',
+                                  t_ltfu_mar,
                                   pregout_t_pre_miss),
-           preeclampsia_mar_mnar = ifelse(ltfu != 'not',
+           preeclampsia_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
                                           0,
                                           preeclampsia_pre_miss),
-           pregout_mar_mnar = ifelse(ltfu != 'not',
+           pregout_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
                                      'unknown',
                                      pregout_pre_miss),
-           pregout_t_mar_mnar = ifelse(ltfu != 'not',
-                                       t_ltfu,
+           pregout_t_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
+                                       t_ltfu_mar_mnar,
                                        pregout_t_pre_miss))
   # NOTE: Analysis problem to deal with -- some censored on the day that they are randomized (i.e., they have their indexing encounter and then never come back). Will likely need to add a small constant to all times. Check with Jess.
   
