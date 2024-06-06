@@ -9,11 +9,24 @@
 
 
 
+
+
+
+
+
+
 #####################################################
 # FUNCTION: create_cohort()
 # PURPOSE: This function takes the raw generated DGM
 # data and imposes on it the missingness, assigns trt,
 # and then creates analytic cohorts from the raw data.
+#
+# INPUTs:
+# - dataset = raw generated DGM data
+# - p_sev_beta = betas for the missingness logistic
+#   regression based upon severity
+# - p_miss_outcome = betas for the missingness 
+#   logistic regression based upon preg outcome
 #####################################################
 
 ### CHASE -- RUN SOME SUMMARIES OF EACH OF THESE DATASETS TO MAKE SURE THEY LOOK AS EXPECTED
@@ -25,7 +38,7 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
                      logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
                      logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
   
-  data <- dataset %>% # all_outcomes 
+  data <- dataset %>% # all_outcomes %>% 
     # mutate(
     #   # Generate missingness probabilities for each person
     #   p_missing_by_sev = p_missing_sev[severity+1],
@@ -36,7 +49,6 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
     #                               ~rbinom(41, 1, .x))
     # )
     dplyr::group_by(sim_id, id) %>% 
-    #rowwise() %>% 
     dplyr::mutate(
       
       ######################################
@@ -47,7 +59,7 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
       
       # Select missingness values for each person's gestational week
       # manually input as 41
-      missing_by_sev = list(rbinom(41, 1, p_missing_by_sev)),
+      missing_by_sev = list(rbinom(n=41, size=1, prob=p_missing_by_sev)),
       
       ######################################
       ### Untreated Potential Outcomes
@@ -70,7 +82,6 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
       ### Identify prenatal encounters after
       ### the first.
       
-      # Need to map in two values from the tibble.
       pnc_enc_rev = list(revise_pnc(unlist(pnc_enc),
                                     pnc_wk)) ,
       
@@ -79,9 +90,12 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
       ### Missing Indicators
       
       ltfu_sev = first_missing_sev(unlist(missing_by_sev),
-                                   pnc_wk),
+                                   pnc_wk)
+      
     ) %>% 
     unnest_wider(c(untreated_po, treated_po)) 
+  
+  
   
   # Assign the treatment values among those where include ne 0
   data2 <- assign_trt(subset(data, include != 0)) %>% 
@@ -110,15 +124,20 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
     # -- This would occur if either:
     # -- - ltfu_sev is not missing and less than or equal to pregout_t_pre_miss, OR
     # -- - ltfu_out is equal to 1
-    # Create an indicator just for MAR and just for MNAR.
+    # Create an indicator just for MAR only and MAR+MNAR.
     mutate(ltfu_mar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
                              "sev",
                              "not"),
-           ltfu_mar_mnar = ifelse(ltfu_out == 1 & (is.na(ltfu_sev) || ltfu_sev > pregout_t_pre_miss),
-                                  "out",
-                                  ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
-                                         "sev",
+           ltfu_mar_mnar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
+                                  "sev",
+                                  ifelse(ltfu_out == 1,
+                                         "out",
                                          "not"))) %>% 
+           # ltfu_mar_mnar = ifelse(ltfu_out == 1 & (is.na(ltfu_sev) || ltfu_sev > pregout_t_pre_miss),
+           #                        "out",
+           #                        ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
+           #                               "sev",
+           #                               "not"))) %>% 
     # Now determine timing when LTFU
     mutate(t_ltfu_mar = pnc_miss(unlist(pnc_enc_rev),
                                  ltfu_mar,
@@ -157,7 +176,22 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
 
 
 
-### Some necessary helper functions
+
+### FUNCTION: logodds_to_p()
+# This function converts the log-odds into a
+# probability. Important for deriving probabilities
+# from the logit function.
+# INPUT:
+# - logodds = log-odds value that needs to be 
+#   converted to a probability
+
+logodds_to_p <- function(logodds){
+  
+  p <- exp(logodds)/(1 + exp(logodds))
+  
+  return(p)
+  
+}
 
 
 
@@ -177,7 +211,10 @@ find_first_not_contpreg <- function(vec) {
   }
 }
 
-### FUNCITON: find_first_preeclampsia()
+
+
+
+### FUNCTION: find_first_preeclampsia()
 # Find the first element of a preg outcomes list that 
 # is preeclampsia
 find_first_preeclampsia <- function(vec) {
@@ -188,6 +225,71 @@ find_first_preeclampsia <- function(vec) {
     return(idx[1])
   }
 }
+
+
+
+
+#### FUNCTION: untreated_outcomes()
+# This function the untreated
+# potential outcomes
+untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outcomes, pnc_wk){
+  
+  ## Find the first pregnancy outcome
+  # Gestational week that the outcome occurred (i.e., 1 + selected week)
+  # Don't need to add 1 because Excel indexes from gest week 0 and R from 1
+  first_preg_t = find_first_not_contpreg(preg_outcomes) #+ 1
+  
+  ## Determine if the person developed preeclampsia if untreated
+  first_preec_t = find_first_preeclampsia(preeclampsia_outcomes) # + 1
+  
+  ## A person only actually develops preeclampsia if it occurs prior
+  ## to or the same week as the untreated pregnancy outcome.
+  preeclampsia = ifelse(is.na(first_preec_t),
+                        0,
+                        as.numeric(first_preec_t <= first_preg_t))
+  
+  ## Now, get the revised outcome based upon their preeclampsia value
+  # Gestational week that the outcome occurs
+  final_preg_t = ifelse(preeclampsia == 0, # If no preeclampsia
+                        first_preg_t, # Then potential outcome
+                        first_preec_t) # Else preeclampsia timing
+  
+  # Get the actual outcome value
+  final_preg = ifelse(preeclampsia == 0,
+                      preg_outcomes[final_preg_t], 
+                      revised_outcomes[final_preg_t]) 
+  
+  final_preg = gsub("_next", "", final_preg)
+  
+  
+  # Determine if the person would be indexed into the cohort at 4, 7, 
+  # and 16 weeks of gestation -- A person had to NOT have had a fetal
+  # death prior to that gestational week to be included
+  # Make an indicator variable for if they should be included
+  if (final_preg_t > 4  & pnc_wk == 4){
+    include = 4
+  } else if (final_preg_t > 7 & pnc_wk == 7){
+    include = 7
+  } else if (final_preg_t > 16 & pnc_wk == 16){
+    include = 16
+  } else{
+    include = 0
+  }
+  
+  
+  # Return a list of the desired values
+  list(
+    preeclampsia0 = preeclampsia,
+    final_preg0_t = final_preg_t,
+    final_preg0 = final_preg,
+    include = include 
+  )
+  
+}
+
+
+
+
 
 
 
@@ -206,7 +308,7 @@ find_first_not_contpreg_wk <- function(vec, wk) {
   # Outcomes are determined the week prior to when they occur. Thus,
   # we want the first outcome where it is determined at or after the 
   # prenatal care visit (week+1). Thus, it needs to be greater than wk
-  index_greater_than_wk <- which(idx > wk)[1] #Previously: wk-1
+  index_greater_than_wk <- which(idx > wk)[1] 
   
   if (length(index_greater_than_wk) == 0) {
     return(NA)
@@ -217,107 +319,35 @@ find_first_not_contpreg_wk <- function(vec, wk) {
 
 
 
-#### FUNCTION: untreated_outcomes()
-# This function the untreated
-# potential outcomes
-untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outcomes, pnc_wk){
-  
-  ## Find the first pregnancy outcome
-  # Gestational week that the outcome occurred (i.e., 1 + selected week)
-  # Don't need to add 1 because Excel indexes from gest week 0 and R from 1
-  first_preg_t = find_first_not_contpreg(preg_outcomes) #+ 1
-  
-  ## Determine if the person developed preeclampsia if untreated
-  first_preec_t = find_first_preeclampsia(preeclampsia_outcomes) # + 1
-  
-  ## A person only actually develops preeclampsia if it occurs prior
-  ## to the untreated pregnancy outcome.
-  preeclampsia = ifelse(is.na(first_preec_t),
-                        0,
-                        as.numeric(first_preec_t < first_preg_t))
-  
-  ## Now, get the revised outcome based upon their preeclampsia value
-  # Gestational week that the outcome occurs
-  final_preg_t = ifelse(preeclampsia == 0, # If no preeclampsia
-                        first_preg_t, # Then potential outcome
-                        first_preec_t) # Else preecalmpsia timing
-  
-  # Get the actual outcome value
-  final_preg = ifelse(preeclampsia == 0,
-                      preg_outcomes[final_preg_t], # Previously had - 1 in the index
-                      revised_outcomes[final_preg_t]) # Previously had - 1
-  
-  final_preg = gsub("_next", "", final_preg)
-  
-  # Old indicator variables
-  # include_4wk = final_preg_t > 4 
-  # include_7wk = final_preg_t > 7
-  # include_16wk = final_preg_t > 16
-  
-  # Determine if the person would be indexed into the cohort at 4, 7, 
-  # and 16 weeks of gestation -- A person had to NOT have had a fetal
-  # death prior to that gestational week to be included
-  # Make an indicator variable for if they should be included
-  if (final_preg_t > 4  & pnc_wk == 4){
-    include = 4
-  } else if (final_preg_t > 7 & pnc_wk == 7){
-    include = 7
-  } else if (final_preg_t > 16 & pnc_wk == 16){
-    include = 16
-  } else{
-    include = 0
-  }
-  # Don't need to change the indexes with +/- 1 here because outcomes already indexed
-  # up with the R vectors.
-  
-  
-  # Return a list of the desired values
-  list(
-    preeclampsia0 = preeclampsia,
-    final_preg0_t = final_preg_t,
-    final_preg0 = final_preg,
-    include = include # Inclusion variable indicator
-  )
-  
-}
-
-
-
-
-
-
-
-
-
 #### FUNCTION: treated_outcomes()
-# This function the treated
+# This function identifies the treated
 # potential outcomes
 treated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outcomes, wk){
   
   ## Determine if the person developed preeclampsia if treated
-  first_preec_t = find_first_preeclampsia(preeclampsia_outcomes) #+ 1
+  first_preec_t = find_first_preeclampsia(preeclampsia_outcomes) 
   # Note: Preeclampsia cannot develop until after the prenatal timings of interest
   
-  ## Find the first pregnancy outcome
-  # Gestational week that the outcome occurred (i.e., 1 + selected week)
-  first_preg_t = find_first_not_contpreg_wk(preg_outcomes, wk) #+ 1
+  ## Find the first pregnancy outcome that occurred after the indexing
+  ## prenatal encounter -- Only way that we will see these outcomes
+  first_preg_t = find_first_not_contpreg_wk(preg_outcomes, wk) 
   
   ## A person only actually develops preeclampsia if it occurs prior
-  ## to the treated pregnancy outcome.
+  ## to or the same week as the treated pregnancy outcome.
   preeclampsia = ifelse(is.na(first_preec_t),
                         0,
-                        as.numeric(first_preec_t < first_preg_t))
+                        as.numeric(first_preec_t <= first_preg_t))
   
   ## Now, get the revised outcome based upon their preeclampsia value
   # Gestational week that the outcome occurs
   final_preg_t = ifelse(preeclampsia == 0, # If no preeclampsia
                         first_preg_t, # Then potential outcome
-                        first_preec_t) # Else preecalmpsia timing
+                        first_preec_t) # Else preeclampsia timing
   
   # Get the actual outcome value
   final_preg = ifelse(preeclampsia == 0,
-                      preg_outcomes[final_preg_t], #  - 1 in the []
-                      revised_outcomes[final_preg_t]) #  - 1
+                      preg_outcomes[final_preg_t], 
+                      revised_outcomes[final_preg_t])
   
   final_preg = gsub("_next", "", final_preg)
   
@@ -327,10 +357,6 @@ treated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outco
     preeclampsia1 = preeclampsia,
     final_preg1_t = final_preg_t,
     final_preg1 = final_preg
-    # This reset the names but did not save them as expected for unnesting.
-    # setNames(list(preeclampsia), paste0("preeclampsia1_wk", wk)),
-    # setNames(list(final_preg_t), paste0("final_preg1_t_wk", wk)),
-    # setNames(list(final_preg), paste0("final_preg1_wk", wk))
   )
   
 }
@@ -340,23 +366,27 @@ treated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outco
 #### FUNCTION: revise_pnc()
 # Revise the occurrence of prenatal care
 # encounters depending upon their gestational
-# week of indexing (i.e., their first prenatal)
-# care encounter
+# week of indexing (i.e., their first prenatal
+# care encounter)
+# INPUTs:
+# - pnc_encounters - vector of the prenatal care
+#   encounter indicators
+# - wk - week of the indexing prenatal care encounter
+
 revise_pnc <- function(pnc_encounters, wk){
   
   n <- length(pnc_encounters)
   
-  # Note that Excel starts from week 0 (i.e., pnc encounter during week 0)
-  # As such, to have no prior PNC visits prior to week, we would make all 
-  # PNC encounter indicators including wk 0 -- R starts indexing at 1
-  pre_wk <- rep(0, wk)
+  # No prenatal encounters prior to indexing prenatal encounter
+  pre_week <- rep(0, wk-1)
   
-  # Adding 1 because out gestweeks start at 0  in the Excel file
-  # -- So, wk=7 in the R indexing aligns with gestwk 6 in the Excel file
+  # Prenatal encounter on indexing prenatal encounter week
+  week <- 1
+  
+  # Prenatal encounters after the indexing prenatal encounter
   wk_plus <- pnc_encounters[(wk+1):n]
   
-  # Revised
-  # return(c(pre_wk, wk_plus))
+  # Return the final list of prenatal encounters
   list(
     c(pre_wk, wk_plus)
     )
@@ -364,16 +394,25 @@ revise_pnc <- function(pnc_encounters, wk){
 }
 
 
+
+
+
+
 ### FUNCTION first_missing_sev()
 # This function is intended to identify the
 # first gestational week where the person
 # is LTFU due to hypertension severity.
+# INPUTS:
+# - missing_vec: vector of the missing indicators by severity
+# - gestwk: gestationanl week that prenatal care was initiated
+#   have to be LTFU after that.
+
 first_missing_sev <- function(missing_vec, gestwk){
   
   # Identify the instances where missing
   ind <- which(missing_vec == 1)
   
-  # Do not add one. Gestational week of the first
+  # Gestational week of the first
   # pnc visit is indexed from week zero. However, the 
   # vector itself is indexed by R from 1, not zero.
   # Losses to follow-up occur the week after they were
@@ -420,17 +459,7 @@ assign_trt <- function(dataset){
 
 
 
-### FUNCTION: logodds_to_p()
-# This function converts the log-odds into a
-# probability. Important for deriving probabilities
-# from the logit function.
-logodds_to_p <- function(logodds){
-  
-  p <- exp(logodds)/(1 + exp(logodds))
-  
-  return(p)
-  
-}
+
 
 
 
@@ -443,7 +472,7 @@ logodds_to_p <- function(logodds){
 
 assign_out_ltfu <- function(dataset){
   
-  # Pull out the p_trt vector
+  # Pull out the p_out_ltfu vector
   p_ltfu <- dataset$p_out_ltfu
   
   # Generate treatments

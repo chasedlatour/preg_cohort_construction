@@ -9,19 +9,6 @@
 
 
 
-#### FUNCTION: generate()
-# This is the baseline function that will be 
-# -- used to generate the potential outcomes
-# -- for each cohort.
-
-# Inputs:
-# n_sim = simulation number (id)
-# n = number of individuals in a cohort/repetition
-# p_sev_beta = betas for the logistic regression for missingness
-#   due to disease severity -- c(beta0, beta1, beta2)
-# p_trt_sev = vector of treatment probabilities by disease severity
-# p_indx_pnc = vector of probabilities for week of indexing prenatal care visit (6, 9, 16)
-
 # Testing
 
 # n_sim <- 1
@@ -31,12 +18,40 @@
 # p_indx_pnc <- c(0.25, 0.375, 0.375) # Think about what these probabilities should be -- likely just want reasonable distribution
 
 
+
+
+
+
+
+
+
+
+
+
+#### FUNCTION: generate()
+# This is the baseline function that will be 
+# -- used to generate the potential outcomes
+# -- for each cohort.
+
+# Inputs:
+# n_sim = simulation number (id)
+# n = number of individuals in a cohort/repetition
+# p_trt_sev = vector of treatment probabilities by disease severity
+# p_indx_pnc = vector of probabilities for week of indexing prenatal care visit (6, 9, 18 from LMP)
+# potential_preg_untrt = dataset with the weekly probabilities for untreated potential preg outcomes
+# potential_preg_trt = same but treated potential pregnancy outcomes
+# potential_preec_untrt = dataset with weekly probabilities for untreated potential preeclampsia outcomes
+# potential_preec_trt = same but treated potential preeclampsia outcomes
+# revised_preg = dataset with the weekly probabilities for pregnancy outcomes after preeclampsia
+# pnc_prob = dataset with the weekly probabilities for a prenatal encounter
+
 generate <- function(n_sim, n, p_trt_sev, p_indx_pnc,
                      potential_preg_untrt, potential_preg_trt, 
                      potential_preec_untrt, potential_preec_trt,
                      revised_preg, pnc_prob){
   
-  # Per Morris et al. 2019. Save the random state at the beginning of the simulation in case want it later.
+  # Per Morris et al. 2019. Save the random state at the beginning of 
+  # the simulation in case want it later
   initial_seed <- list(.Random.seed)
   
   # Get the severity distribution from a multinomial random variable
@@ -58,7 +73,7 @@ generate <- function(n_sim, n, p_trt_sev, p_indx_pnc,
     
     # Generate 0 through 40 gestational weeks - 1 vector
     # This indexed prenatal care encounters, not outcomes. Outcomes occur at 1+ this.
-    # Note: R indexes vectors from 1, not 0, as we have done for these gestational weeks
+    # Note: R indexes vectors from 1, not 0, as we have done for gestational weeks from conception
     pnc_gw = list(seq(0,40, by = 1)),
     
     # Treatment needs to be assigned AFTER the cohort is selected. Otherwise,
@@ -129,6 +144,11 @@ generate <- function(n_sim, n, p_trt_sev, p_indx_pnc,
 ### FUNCTION: sample_outcomes_for_id()
 # This function will create the potential pregnancy outcomes based upon 
 # the probabilities recorded in the Excel file.
+# This will output a list of the potential pregnancy outcomes for one person.
+#
+# Inputs:
+# - data = dataset with the weekly probabilities for potential pregnancy outcomes
+# - sev = severity value for that person
 sample_outcomes_for_id <- function(data, sev) {
   
   # Subset to the severity level of interest
@@ -155,8 +175,20 @@ sample_outcomes_for_id <- function(data, sev) {
 }
 
 
+
+
+
+
+
 ### FUNCTION sample_preeclampsia()
 # This function will create potential preeclampsia outcomes 
+# This will output a list of the potential preeclampsia
+# outcomes for one person.
+#
+# INPUT:
+# - data = dataset with the weekly potential preeclampsia probabilities
+# - sev = severity value for that person
+
 sample_preeclampsia <- function(data, sev) {
   
   # Subset to the severity level of interest 
@@ -172,10 +204,19 @@ sample_preeclampsia <- function(data, sev) {
 }
 
 
+
+
+
+
+
 #### FUNCTION: process_out()
 # This function takes in the vector out from 
-# sample_revised_preg() and replaces its values
+# sample_revised_preg() -- below -- and replaces its values
 # with those that are compatible with the other vectors.
+#
+# INPUT:
+# - out = vector from sample_revised_preg
+
 process_out <- function(out) {
   # Create an empty vector of characters with the same length as 'probabilities'
   results <- vector("character", length(out))
@@ -193,7 +234,7 @@ process_out <- function(out) {
 
 # Example use:
 # probabilities <- c(rep(0, 10), rep(1, 10), rep(0, 5), rep(1, 5))
-# output <- process_probabilities(probabilities)
+# output <- process_out(probabilities)
 # print(output)
 
 
@@ -212,11 +253,20 @@ sample_revised_preg <- function(data, sev){
   out <- rbinom(n = length(probabilities), 
                 size=1,
                 prob = probabilities)
+  # out is a numeric vector - we want a character vector with the
+  # same values as the others
+  
+  # Revised here using above step.
   rev_out <- process_out(out)
   
   return(list(rev_out))
   
 }
+
+
+
+
+
 
 ### FUNCTION: sample_pnc()
 # This function will provide prenatal care encounter
@@ -236,22 +286,22 @@ sample_pnc <- function(data, sev) {
 }
 
 
-### FUNCTION: logodds_to_p()
-# This function converts the log-odds into a
-# probability. Important for deriving probabilities
-# from the logit function.
-logodds_to_p <- function(logodds){
-  
-  p <- exp(logodds)/(1 + exp(logodds))
-  
-  return(p)
-  
-}
 
 
 
 
-
+# # OLD HELPER FUNCTION
+# ### FUNCTION: logodds_to_p()
+# # This function converts the log-odds into a
+# # probability. Important for deriving probabilities
+# # from the logit function.
+# logodds_to_p <- function(logodds){
+#   
+#   p <- exp(logodds)/(1 + exp(logodds))
+#   
+#   return(p)
+#   
+# }
 
 
 

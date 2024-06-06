@@ -72,6 +72,13 @@ generate_dgm <- function(param_file, save_name_gen,
 
 
 
+
+
+
+
+
+
+
 ##################################################
 # RR, Trt-Abortion = 0.8
 # RR, Trt-Preeclampsia = 0.8
@@ -92,3 +99,28 @@ generate_dgm(param_file, save_name_gen, rr_abortion, rr_preec)
 
 ###### 
 
+
+# test <- readRDS("DGM - Abortion08Preeclampsia08.rds")
+# 
+# n_ids <- nrow(test)
+# 
+# # See the distribution of outcomes by each gestational week
+# 
+# test2 <- test %>% 
+#   select(id, preg_outcomes_untrt, preg_outcomes_trt) %>% 
+#   unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
+#   unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
+#   mutate(gw = rep(0:40, n_ids)) %>% 
+#   group_by(gw) %>% 
+#   summarize(
+#     n_outcome_untrt = sum(preg_outcomes_untrt != "contpreg_next"),
+#     n_outcome_trt = sum(preg_outcomes_trt != "contpreg_next"),
+#     n_fd_untrt = sum(preg_outcomes_untrt == "fetaldeath_next"),
+#     n_fd_trt = sum(preg_outcomes_trt == "fetaldeath_next"),
+#     n_lb_untrt = sum(preg_outcomes_untrt == "livebirth_next"),
+#     n_lb_trt = sum(preg_outcomes_trt == "livebirth_next")
+#   )
+# 
+# View(test2)
+  
+ 

@@ -28,6 +28,53 @@ test <- readRDS("ab08preec08_beta005_gamma01_002.rds")
 
 ```
 
+## Potential Outcomes
+
+```{r}
+
+#####################################################
+# Function to look at the distribution of potential
+# pregnancy outcomes for each scenario
+#####################################################
+
+potential_outcome_dist <- function(dataset){
+  
+  # Number of distinct IDs is the number of rows of dataset
+  n_ids <- nrow(dataset)
+  
+  # See the distribution of outcomes by each gestational week
+  
+  data <- dataset %>% 
+    select(id, preg_outcomes_untrt, preg_outcomes_trt) %>% 
+    unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
+    unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
+    mutate(gw = rep(0:40, n_ids)) %>% 
+    group_by(gw) %>% 
+    summarize(
+      n_contpreg_untrt = sum(preg_outcomes_untrt == "contpreg_next"),
+      n_contpreg_trt = sum(preg_outcomes_trt == "contpreg_next"),
+      n_fd_untrt = sum(preg_outcomes_untrt == "fetaldeath_next"),
+      n_fd_trt = sum(preg_outcomes_trt == "fetaldeath_next"),
+      n_lb_untrt = sum(preg_outcomes_untrt == "livebirth_next"),
+      n_lb_trt = sum(preg_outcomes_trt == "livebirth_next")
+    )
+  
+  return(data)
+  
+}
+
+
+
+  ## Describe the distribution of potential outcomes by GW
+  ## DELETE FOR BOOTSTRAP
+  describe <- potential_outcome_dist(all_outcomes)
+  
+  savename <- paste0("Describe - ", save_name_gen)
+  
+    saveRDS(describe, savename)
+
+```
+
 ## Summary Statistics, Ignoring Missingness
 
 ```{r}
