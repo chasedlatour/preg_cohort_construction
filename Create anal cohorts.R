@@ -90,6 +90,7 @@ gamma1 <- 0.001
 save_name_cohort <- "ab08preec08_beta001_gamma01_001.rds"
 
 set.seed(1234) # Same seed throughout
+set.seed(5678)
 generate_cohort(data, b0_sev, beta12, gamma0, gamma1, save_name_cohort)
 
 
@@ -104,5 +105,6 @@ gamma1 <- 0.02
 save_name_cohort <- "ab08preec08_beta005_gamma01_002.rds"
 
 set.seed(1234) # Same seed throughout
+set.seed(5678)
 generate_cohort(data, b0_sev, beta12, gamma0, gamma1, save_name_cohort)
 

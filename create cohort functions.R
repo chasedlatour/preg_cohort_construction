@@ -38,16 +38,7 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
                      logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
                      logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
   
-  data <- dataset %>% # all_outcomes %>% 
-    # mutate(
-    #   # Generate missingness probabilities for each person
-    #   p_missing_by_sev = p_missing_sev[severity+1],
-    #   
-    #   # Select missingness values for each person's gestational week
-    #   # manually input as 41
-    #   missing_by_sev = purrr::map(p_missing_by_sev,
-    #                               ~rbinom(41, 1, .x))
-    # )
+  data <- dataset %>% #   all_outcomes %>%#
     dplyr::group_by(sim_id, id) %>% 
     dplyr::mutate(
       
@@ -128,16 +119,16 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
     mutate(ltfu_mar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
                              "sev",
                              "not"),
-           ltfu_mar_mnar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
-                                  "sev",
-                                  ifelse(ltfu_out == 1,
-                                         "out",
-                                         "not"))) %>% 
-           # ltfu_mar_mnar = ifelse(ltfu_out == 1 & (is.na(ltfu_sev) || ltfu_sev > pregout_t_pre_miss),
-           #                        "out",
-           #                        ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
-           #                               "sev",
+           # ltfu_mar_mnar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
+           #                        "sev",
+           #                        ifelse(ltfu_out == 1,
+           #                               "out",
            #                               "not"))) %>% 
+           ltfu_mar_mnar = ifelse(ltfu_out == 1 & (is.na(ltfu_sev) || ltfu_sev > pregout_t_pre_miss),
+                                  "out",
+                                  ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
+                                         "sev",
+                                         "not"))) %>%
     # Now determine timing when LTFU
     mutate(t_ltfu_mar = pnc_miss(unlist(pnc_enc_rev),
                                  ltfu_mar,
@@ -388,7 +379,7 @@ revise_pnc <- function(pnc_encounters, wk){
   
   # Return the final list of prenatal encounters
   list(
-    c(pre_wk, wk_plus)
+    c(pre_week,week, wk_plus)
     )
   
 }
@@ -445,6 +436,7 @@ assign_trt <- function(dataset){
   
   # Pull out the p_trt vector
   p_trt <- dataset$p_trt
+  # p_trt <- data$p_trt
   
   # Generate treatments
   trt <- rbinom(n = length(p_trt),
@@ -474,6 +466,7 @@ assign_out_ltfu <- function(dataset){
   
   # Pull out the p_out_ltfu vector
   p_ltfu <- dataset$p_out_ltfu
+  # p_ltfu <- data2$p_out_ltfu
   
   # Generate treatments
   ltfu_out <- rbinom(n = length(p_ltfu),

@@ -217,17 +217,17 @@ sample_preeclampsia <- function(data, sev) {
 # INPUT:
 # - out = vector from sample_revised_preg
 
-process_out <- function(out) {
+process_out <- function(out, n_NA) {
   # Create an empty vector of characters with the same length as 'probabilities'
   results <- vector("character", length(out))
   
-  # Set the first 18 elements to "NA"
-  results[1:18] <- NA
+  # Set the first 17 elements to "NA"
+  results[1:n_NA] <- NA
   
   # For the remaining elements, map 1 to "fetaldeath" and 0 to "delivery"
-  results[19:length(out)] <- ifelse(out[19:length(out)] == 1, 
-                                    "fetaldeath_next", 
-                                    "livebirth_next")
+  results[(n_NA+1):length(out)] <- ifelse(out[(n_NA+1):length(out)] == 1,
+                                          "fetaldeath_next", 
+                                          "livebirth_next")
   
   return(results)
 }
@@ -249,6 +249,9 @@ sample_revised_preg <- function(data, sev){
   # Get the probabilities for each gestational week
   probabilities <- subset(data, severity == sev)$p_fetaldeath
   
+  # Determine how many NAs there should be
+  n_NA <- length(probabilities[probabilities == 0])
+  
   # Use these probabilities with a bernoulli/binomial rv
   out <- rbinom(n = length(probabilities), 
                 size=1,
@@ -257,7 +260,7 @@ sample_revised_preg <- function(data, sev){
   # same values as the others
   
   # Revised here using above step.
-  rev_out <- process_out(out)
+  rev_out <- process_out(out, n_NA)
   
   return(list(rev_out))
   

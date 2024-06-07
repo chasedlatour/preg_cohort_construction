@@ -43,8 +43,8 @@ generate_dgm <- function(param_file, save_name_gen,
   ## Create the parameter list
   params_list_gen <- list(
     n_sim = 1,
-    n = 5000, #1200,
-    p_trt_sev = c(0.35, 0.50, 0.65),
+    n = 10000, #5000,
+    p_trt_sev = c(0.35, 0.35, 0.35), # c(0.35, 0.50, 0.65),
     p_indx_pnc = c(0.25, 0.375, 0.375),
     potential_preg_trt = potential_preg_trt,
     potential_preg_untrt = potential_preg_untrt,
@@ -94,33 +94,11 @@ save_name_gen <- "DGM - Abortion08Preeclampsia08.rds"
 
 # All RDS files are saved
 set.seed(1234)
+set.seed(5678)
 generate_dgm(param_file, save_name_gen, rr_abortion, rr_preec)
 
 
 ###### 
 
 
-# test <- readRDS("DGM - Abortion08Preeclampsia08.rds")
-# 
-# n_ids <- nrow(test)
-# 
-# # See the distribution of outcomes by each gestational week
-# 
-# test2 <- test %>% 
-#   select(id, preg_outcomes_untrt, preg_outcomes_trt) %>% 
-#   unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
-#   unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
-#   mutate(gw = rep(0:40, n_ids)) %>% 
-#   group_by(gw) %>% 
-#   summarize(
-#     n_outcome_untrt = sum(preg_outcomes_untrt != "contpreg_next"),
-#     n_outcome_trt = sum(preg_outcomes_trt != "contpreg_next"),
-#     n_fd_untrt = sum(preg_outcomes_untrt == "fetaldeath_next"),
-#     n_fd_trt = sum(preg_outcomes_trt == "fetaldeath_next"),
-#     n_lb_untrt = sum(preg_outcomes_untrt == "livebirth_next"),
-#     n_lb_trt = sum(preg_outcomes_trt == "livebirth_next")
-#   )
-# 
-# View(test2)
-  
  
