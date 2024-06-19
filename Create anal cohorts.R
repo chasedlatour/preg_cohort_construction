@@ -26,7 +26,7 @@ source("create cohort functions.R")
 # Set values that are going to hold for ALL DGMs and 
 # analytic samples
 #####################################################
-p_sev <- 1 - 0.9^(1/40) # Weekly prob (over 40 weeks) of being LTFU at lowest severity
+p_sev <- 1 - 0.8^(1/40) # Weekly prob (over 40 weeks) of being LTFU at lowest severity
 b0_sev <- log(p_sev / (1-p_sev)) # beta 0 in the logistic regression for LTFU due to severity is NOT varied across scenarios
 
 

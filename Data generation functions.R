@@ -36,6 +36,7 @@
 # Inputs:
 # n_sim = simulation number (id)
 # n = number of individuals in a cohort/repetition
+# p_sev_dist = vector of patient distribution by disease severity
 # p_trt_sev = vector of treatment probabilities by disease severity
 # p_indx_pnc = vector of probabilities for week of indexing prenatal care visit (6, 9, 18 from LMP)
 # potential_preg_untrt = dataset with the weekly probabilities for untreated potential preg outcomes
@@ -45,7 +46,7 @@
 # revised_preg = dataset with the weekly probabilities for pregnancy outcomes after preeclampsia
 # pnc_prob = dataset with the weekly probabilities for a prenatal encounter
 
-generate <- function(n_sim, n, p_trt_sev, p_indx_pnc,
+generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
                      potential_preg_untrt, potential_preg_trt, 
                      potential_preec_untrt, potential_preec_trt,
                      revised_preg, pnc_prob){
@@ -57,7 +58,7 @@ generate <- function(n_sim, n, p_trt_sev, p_indx_pnc,
   # Get the severity distribution from a multinomial random variable
   # We assume that there is an equal distribution across three levels. 
   # Otherwise, this needs to be modified.
-  severity_dist = rmultinom(n=1, size=n, prob=c(1/3, 1/3, 1/3))
+  severity_dist = rmultinom(n=1, size=n, prob=p_sev_dist)
   
   
   ######## GENERATE PEOPLE AND BASELINE VALUES

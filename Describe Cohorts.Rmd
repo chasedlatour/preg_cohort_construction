@@ -84,6 +84,25 @@ describe %>%
 
 Look at the distribution of observed outcomes.
 
+All outcomes, regardless of outcome type.
+
+```{r}
+
+describe %>% 
+  mutate(Treatment = ifelse(trt == 0, 
+                            "Non-Initiation", 
+                            "Initiation")) %>% 
+  ggplot(aes(x = pregout_t_pre_miss, y = after_stat(density*width))) +
+    geom_histogram(alpha = 0.2, position = "identity", bins = 41) +
+    facet_grid(scenario ~ Treatment, labeller = labeller(scenario = label_both, Treatment = label_value), switch = "y") +
+  xlab("Gestational Week of Outcome") +
+  ylab("Proportion of of Outcomes") +
+  theme_bw()
+
+```
+
+All outcomes, stratified by outcome type.
+
 ```{r}
 
 
