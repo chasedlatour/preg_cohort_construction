@@ -43,7 +43,7 @@ generate_dgm <- function(param_file, save_name_gen,
   ## Create the parameter list that are the same across simulations
   params_list_gen <- list(
     n_sim = 1,
-    n = 10000, #5000,
+    n = 15000, #5000,
     p_sev_dist = c(1/3, 1/3, 1/3), # Even distribution
     p_trt_sev = c(0.35, 0.50, 0.65),
     p_indx_pnc = c(0.27, 0.335, 0.395),

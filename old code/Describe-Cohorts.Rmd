@@ -1,0 +1,450 @@
+---
+title: "Describe Cohorts"
+author: "Chase Latour"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(kableExtra)
+```
+
+The goal of this program is to describe the pregnancy cohorts created for each analytic dataset.
+
+First, we must read in the necessary data files. 
+
+```{r}
+
+## Trt-Abortion = 0.8, -Preec = 0.8
+
+#### Missing: Beta1 = 0.01, Gamma0 = 0.1, Gamma1 = 0.001
+test1 <- readRDS("ab08preec08_beta001_gamma01_001.rds") %>% 
+  mutate(scenario = "test1")
+
+#### Missing: Beta1 = 0.05, Gamma0 = 0.1, Gamma1 = 0.02
+test2 <- readRDS("ab08preec08_beta005_gamma01_002.rds") %>% 
+  mutate(scenario = "test2")
+
+# Stack the data files
+
+describe <- rbind(test1, test2)
+
+
+```
+
+
+
+
+## Potential Outcomes
+
+Describe the distribution of the generated potential outcomes at each gestational week. This can help understand if we're seeing an expected distribution of the generated data. This is a simple check that things look as expected. Not a clean kable. Not printed regularly as a result.
+
+Note: There are 0 with fetal death among the untreated from gestational weeks 0-3. However, this occurs because that was a requirement for inclusion in the trial (i.e., no miscarriage prior to randomization).
+
+```{r eval=FALSE}
+
+# Number of distinct IDs is the number of rows of dataset
+n_ids <- nrow(describe)
+
+describe %>% 
+  ungroup() %>% 
+  select(scenario, id, preg_outcomes_untrt, preg_outcomes_trt) %>% 
+  unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
+  unnest(cols = c(preg_outcomes_untrt, preg_outcomes_trt)) %>% 
+  mutate(gw = rep(c(0:40), n_ids)) %>% 
+  group_by(scenario, gw) %>% 
+  summarize(
+    n_contpreg_untrt = sum(preg_outcomes_untrt == "contpreg_next"),
+    n_contpreg_trt = sum(preg_outcomes_trt == "contpreg_next"),
+    n_fd_untrt = sum(preg_outcomes_untrt == "fetaldeath_next"),
+    n_fd_trt = sum(preg_outcomes_trt == "fetaldeath_next"),
+    n_lb_untrt = sum(preg_outcomes_untrt == "livebirth_next"),
+    n_lb_trt = sum(preg_outcomes_trt == "livebirth_next"),
+    .groups = 'drop'
+  ) %>% 
+  select(-scenario) %>% 
+  kbl(col.names = c("GW", "Non-Initiators", "Initiators", "Non-Initiators", "Initiators", 
+                    "Non-Initiators", "Initiators")) %>% 
+  kable_classic() %>% 
+  add_header_above(c(" " = 1, "Continue Pregnancy" = 2, "Fetal Death" = 2, "Live Birth" = 2)) %>% 
+  pack_rows("Test 1", 1, 41) %>% 
+  pack_rows("Test 2", 42, 82)
+
+
+
+
+```
+
+## Describe Cohort Ignoring Missingness
+
+Look at the distribution of observed outcomes.
+
+All outcomes, regardless of outcome type.
+
+```{r}
+
+describe %>% 
+  mutate(Treatment = ifelse(trt == 0, 
+                            "Non-Initiation", 
+                            "Initiation")) %>% 
+  ggplot(aes(x = pregout_t_pre_miss, y = after_stat(density*width))) +
+    geom_histogram(alpha = 0.2, position = "identity", bins = 41) +
+    facet_grid(scenario ~ Treatment, labeller = labeller(scenario = label_both, Treatment = label_value), switch = "y") +
+  xlab("Gestational Week of Outcome") +
+  ylab("Proportion of of Outcomes") +
+  theme_bw()
+
+```
+
+All outcomes, stratified by outcome type.
+
+```{r}
+
+
+describe %>% 
+  mutate(Treatment = ifelse(trt == 0, 
+                            "Non-Initiation", 
+                            "Initiation")) %>% 
+  ggplot(aes(x = pregout_t_pre_miss, y = after_stat(density*width), color = pregout_pre_miss, fill = pregout_pre_miss)) +
+    geom_histogram(alpha = 0.2, position = "identity", bins = 41) +
+    facet_grid(scenario ~ Treatment, labeller = labeller(scenario = label_both, Treatment = label_value), switch = "y") +
+  xlab("Gestational Week of Outcome") +
+  ylab("Proportion of of Outcomes") +
+  theme_bw()
+
+
+# # Look at the true count distribution
+# describe %>%
+#   group_by(scenario, pregout_t_pre_miss) %>%
+#   summarize(
+#     n_abortion_trt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20 & trt == 1),
+#     n_abortion_untrt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20 & trt == 0),
+#     n_stillbirth_trt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20 & trt == 1),
+#     n_stillbirth_untrt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20 & trt == 0),
+#     n_livebirth_trt = sum(pregout_pre_miss == "livebirth" & trt == 1),
+#     n_livebirth_ujntrt = sum(pregout_pre_miss == "livebirth" & trt == 0),
+#     .groups = 'keep'
+#   ) %>%
+#   kbl() %>%
+#   kable_classic()
+
+```
+
+Now look at summary statistics for the cohort
+
+```{r}
+
+describe %>% 
+  group_by(scenario, trt) %>% 
+  summarize(
+    
+    # Calculate the number per category
+    n_low = sum(severity == 0),
+    n_low_perc = round(100*n_low/n(),2),
+    n_med = sum(severity == 1),
+    n_med_perc = round(100*n_med/n(), 2),
+    n_high = sum(severity == 2),
+    n_high_perc = round(100*n_high/n(), 2),
+    
+    # Distribution by first pnc encounter
+    n_pnc_4 = sum(pnc_wk == 4),
+    pnc4_perc = round(100*n_pnc_4/n(),2),
+    n_pnc_7 = sum(pnc_wk == 7),
+    pnc7_perc = round(100*n_pnc_7/n(),2),
+    n_pnc_16 = sum(pnc_wk == 16),
+    pnc16_perc = round(100*n_pnc_16/n(),2),
+    
+    # Distribution of outcomes
+    n_miscarriage_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20),
+    miscarriageall_p = round(100*n_miscarriage_all / n(),2),
+    n_stillbirth_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20),
+    stillbirthall_p = round(100*n_stillbirth_all/n(), 2),
+    n_livebirth_all = sum(pregout_pre_miss == "livebirth"),
+    livebirthall_p = round(100*n_livebirth_all/n()),
+    
+    # Timing of those outcomes
+    miscarriageall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20], 
+                                  probs = 0.25),
+    miscarriageall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20],
+                                  probs = 0.75),
+    miscarriageall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20]),
+    stillbirthall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20],
+                                 probs = 0.25),
+    stillbirthall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20],
+                                 0.75),
+    stillbirthall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20]),
+    livebirth_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "livebirth"],
+                             probs = 0.25),
+    livebirth_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "livebirth"],
+                             probs = 0.75),
+    livebirth_med = median(pregout_t_pre_miss[pregout_pre_miss == "livebirth"]),
+    
+    # Distribution of Preeclampsia
+    n_preec = sum(preeclampsia_pre_miss == 1),
+    n_preec_perc = round(100*n_preec/n(),2),
+    
+    # Distribution of uncensored outcomes
+    missing_mar = sum(ltfu_mar != "not"),
+    missing_mar_perc = round(100*missing_mar/n(), 2),
+    missing_mar_p25 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.25),
+    missing_mar_p75 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.75),
+    missing_mar_med = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.5),
+    # miscarriage_mar = sum(ltfu_mar != "not" & pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20),
+    # miscarriagemar_perc = round(100*miscarriage_mar/n(), 2),
+    # stillbirth_mar = sum(ltfu_mar != "not" & pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20),
+    # stillbirthmar_perc = round(100*stillbirth_mar/n(), 2),
+    # livebirth_mar = sum(ltfu_mar != "not" & pregout_mar == "livebirth"),
+    # livebirthmar_perc = round(100*livebirth_mar/n(),2),
+    
+    missing_mnar = sum(ltfu_mar_mnar != "not"),
+    missing_mnar_perc = round(100*missing_mnar/n(), 2),
+    missing_mnar_p25 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs=0.25),
+    missing_mnar_p75 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.75),
+    missing_mnar_med = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.5),
+    # miscarriage_marmnar = sum(ltfu_mar_mnar != "not" & pregout_pre_miss == "fetaldeath" 
+    #                           & pregout_t_pre_miss < 20),
+    # miscarriagemarmnar_perc = round(100*miscarriage_marmnar/n(), 2),
+    # stillbirth_marmnar = sum(ltfu_mar_mnar != "not" & pregout_pre_miss == "fetaldeath" 
+    #                          & pregout_t_pre_miss >= 20),
+    # stillbirthmarmnar_perc = round(100*stillbirth_marmnar/n(), 2),
+    # livebirth_marmnar = sum(ltfu_mar_mnar != "not" & pregout_mar_mnar == "livebirth"),
+    # livebirthmarmnar_perc = round(100*livebirth_marmnar/n(),2),
+    
+    .groups = 'keep'
+  ) %>% 
+  mutate(
+    # Number of pregnancies per severity
+    n_low = paste0(n_low," (", n_low_perc, "%)"),
+    n_med = paste0(n_med," (", n_med_perc, "%)"),
+    n_high = paste0(n_high," (", n_high_perc, "%)"),
+    # Number of pregnancies per pnc
+    n_pnc_4 = paste0(n_pnc_4, " (", pnc4_perc, "%)"),
+    n_pnc_7 = paste0(n_pnc_7, " (", pnc7_perc, "%)"),
+    n_pnc_16 = paste0(n_pnc_16, " (", pnc4_perc, "%)"),
+    # Pregnancy outcomes
+    n_miscarriage_all = paste0(n_miscarriage_all, " (", miscarriageall_p,")%"),
+    n_stillbirth_all = paste0(n_stillbirth_all, " (", stillbirthall_p, "%)"),
+    n_livebirth_all = paste0(n_livebirth_all, " (", livebirthall_p, "%)"),
+    # Timing of Preg Outcomes
+    miscarriage_t = paste0(miscarriageall_med, " (", miscarriageall_p25, ", ", miscarriageall_p75, ")"),
+    stillbirth_t = paste0(stillbirthall_med, " (", stillbirthall_p25, ", ", stillbirthall_p75, ")"),
+    livebirth_t = paste0(livebirth_med, " (", livebirth_p25, ", ", livebirth_p75, ")"),
+    # Missing by MAR
+    missing_mar = paste0(missing_mar, " (", missing_mar_perc, "%)"),
+    missing_mar_t = paste0(missing_mar_med, " (", missing_mar_p25, ", ", missing_mar_p75, ")"),
+    # miscarriage_mar = paste0(miscarriage_mar, " (", miscarriagemar_perc, "%)"),
+    # stillbirth_mar = paste0(stillbirth_mar, " (", stillbirthmar_perc, "%)"),
+    # livebirth_mar = paste0(livebirth_mar, " (", livebirthmar_perc, "%)"),
+    # Missing by MNAR
+    missing_mnar = paste0(missing_mnar, " (", missing_mnar_perc, "%)"),
+    missing_mnar_t = paste0(missing_mnar_med, " (", missing_mnar_p25, ", ", missing_mnar_p75, ")") #,
+    # miscarriage_mar_mnar = paste0(miscarriage_marmnar, " (", miscarriagemarmnar_perc, "%)"),
+    # stillbirth_mar_mnar = paste0(stillbirth_marmnar, " (", stillbirthmarmnar_perc, "%)"),
+    # livebirth_mar_mnar = paste0(livebirth_marmnar, " (", livebirthmarmnar_perc, "%)")
+  ) %>% 
+  select(scenario, trt, n_low, n_med, n_high, n_pnc_4, n_pnc_7, n_pnc_16, n_miscarriage_all,
+         n_stillbirth_all, n_livebirth_all, miscarriage_t, stillbirth_t, livebirth_t,
+         missing_mar, missing_mar_t, missing_mnar, missing_mnar_t
+         # miscarriage_mar, stillbirth_mar, livebirth_mar, miscarriage_mar_mnar, 
+         # stillbirth_mar_mnar, livebirth_mar_mnar
+         ) %>% 
+  pivot_longer(
+    cols = !c(scenario, trt),
+    names_to = "SummaryStatistic",
+    values_to = "value"
+  ) %>% 
+  pivot_wider(
+    names_from = c(scenario, trt),
+    values_from = value
+  ) %>% 
+  kbl() %>% 
+  kable_classic() %>% 
+  add_header_above(c(" " = 1, "Non-Initiators" = 1, "Initiators" = 1, "Non-Initiators" = 1, "Initiators" = 1)) %>% 
+  add_header_above(c(" " = 1, "Test 1" = 2, "Test 2" = 2)) %>% 
+  pack_rows("Number (%) of Pregnancies by Severity", 1, 3) %>% 
+  pack_rows("Number (%) of Pregnancies by First PNC", 4, 6) %>% 
+  pack_rows("Number (%) of Pregnancy Outcomes", 7, 9) %>% 
+  pack_rows("Median (IQR) of Pregnancy Outcome Timing", 10, 12) %>% 
+  pack_rows("Number (%) of Pregnancy Outcomes LTFU per MAR", 13, 13) %>% 
+  pack_rows("Median (IQR) of LTFU Timing per MAR", 14, 14) %>% 
+  pack_rows("Number (%) of Pregnancies LTFU per MAR+MNAR", 15, 15) %>% 
+  pack_rows("Median (IQR) of LTFU Timing per MAR+MNAR", 16, 16)
+    
+
+
+
+```
+
+Look at the distribution among those with low severity disease.
+
+```{r}
+
+describe %>% 
+  filter(severity == 0) %>% 
+  group_by(scenario, trt) %>% 
+  summarize(
+    
+    # Calculate the number per category
+    n_low = sum(severity == 0),
+    n_low_perc = round(100*n_low/n(),2),
+    n_med = sum(severity == 1),
+    n_med_perc = round(100*n_med/n(), 2),
+    n_high = sum(severity == 2),
+    n_high_perc = round(100*n_high/n(), 2),
+    
+    # Distribution by first pnc encounter
+    n_pnc_4 = sum(pnc_wk == 4),
+    pnc4_perc = round(100*n_pnc_4/n(),2),
+    n_pnc_7 = sum(pnc_wk == 7),
+    pnc7_perc = round(100*n_pnc_7/n(),2),
+    n_pnc_16 = sum(pnc_wk == 16),
+    pnc16_perc = round(100*n_pnc_16/n(),2),
+    
+    # Distribution of outcomes
+    n_miscarriage_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20),
+    miscarriageall_p = round(100*n_miscarriage_all / n(),2),
+    n_stillbirth_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20),
+    stillbirthall_p = round(100*n_stillbirth_all/n(), 2),
+    n_livebirth_all = sum(pregout_pre_miss == "livebirth"),
+    livebirthall_p = round(100*n_livebirth_all/n()),
+    
+    # Timing of those outcomes
+    miscarriageall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20], 
+                                  probs = 0.25),
+    miscarriageall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20],
+                                  probs = 0.75),
+    miscarriageall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20]),
+    stillbirthall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20],
+                                 probs = 0.25),
+    stillbirthall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20],
+                                 0.75),
+    stillbirthall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20]),
+    livebirth_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "livebirth"],
+                             probs = 0.25),
+    livebirth_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "livebirth"],
+                             probs = 0.75),
+    livebirth_med = median(pregout_t_pre_miss[pregout_pre_miss == "livebirth"]),
+    
+    # Distribution of uncensored outcomes
+    missing_mar = sum(ltfu_mar != "not"),
+    missing_mar_perc = round(100*missing_mar/n(), 2),
+    missing_mar_p25 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.25),
+    missing_mar_p75 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.75),
+    missing_mar_med = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.5),
+    # miscarriage_mar = sum(ltfu_mar != "not" & pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20),
+    # miscarriagemar_perc = round(100*miscarriage_mar/n(), 2),
+    # stillbirth_mar = sum(ltfu_mar != "not" & pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20),
+    # stillbirthmar_perc = round(100*stillbirth_mar/n(), 2),
+    # livebirth_mar = sum(ltfu_mar != "not" & pregout_mar == "livebirth"),
+    # livebirthmar_perc = round(100*livebirth_mar/n(),2),
+    
+    missing_mnar = sum(ltfu_mar_mnar != "not"),
+    missing_mnar_perc = round(100*missing_mnar/n(), 2),
+    missing_mnar_p25 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs=0.25),
+    missing_mnar_p75 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.75),
+    missing_mnar_med = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.5),
+    # miscarriage_marmnar = sum(ltfu_mar_mnar != "not" & pregout_pre_miss == "fetaldeath" 
+    #                           & pregout_t_pre_miss < 20),
+    # miscarriagemarmnar_perc = round(100*miscarriage_marmnar/n(), 2),
+    # stillbirth_marmnar = sum(ltfu_mar_mnar != "not" & pregout_pre_miss == "fetaldeath" 
+    #                          & pregout_t_pre_miss >= 20),
+    # stillbirthmarmnar_perc = round(100*stillbirth_marmnar/n(), 2),
+    # livebirth_marmnar = sum(ltfu_mar_mnar != "not" & pregout_mar_mnar == "livebirth"),
+    # livebirthmarmnar_perc = round(100*livebirth_marmnar/n(),2),
+    
+    .groups = 'keep'
+  ) %>% 
+  mutate(
+    # Number of pregnancies per severity
+    n_low = paste0(n_low," (", n_low_perc, "%)"),
+    n_med = paste0(n_med," (", n_med_perc, "%)"),
+    n_high = paste0(n_high," (", n_high_perc, "%)"),
+    # Number of pregnancies per pnc
+    n_pnc_4 = paste0(n_pnc_4, " (", pnc4_perc, "%)"),
+    n_pnc_7 = paste0(n_pnc_7, " (", pnc7_perc, "%)"),
+    n_pnc_16 = paste0(n_pnc_16, " (", pnc4_perc, "%)"),
+    # Pregnancy outcomes
+    n_miscarriage_all = paste0(n_miscarriage_all, " (", miscarriageall_p,")%"),
+    n_stillbirth_all = paste0(n_stillbirth_all, " (", stillbirthall_p, "%)"),
+    n_livebirth_all = paste0(n_livebirth_all, " (", livebirthall_p, "%)"),
+    # Timing of Preg Outcomes
+    miscarriage_t = paste0(miscarriageall_med, " (", miscarriageall_p25, ", ", miscarriageall_p75, ")"),
+    stillbirth_t = paste0(stillbirthall_med, " (", stillbirthall_p25, ", ", stillbirthall_p75, ")"),
+    livebirth_t = paste0(livebirth_med, " (", livebirth_p25, ", ", livebirth_p75, ")"),
+    # Missing by MAR
+    missing_mar = paste0(missing_mar, " (", missing_mar_perc, "%)"),
+    missing_mar_t = paste0(missing_mar_med, " (", missing_mar_p25, ", ", missing_mar_p75, ")"),
+    # miscarriage_mar = paste0(miscarriage_mar, " (", miscarriagemar_perc, "%)"),
+    # stillbirth_mar = paste0(stillbirth_mar, " (", stillbirthmar_perc, "%)"),
+    # livebirth_mar = paste0(livebirth_mar, " (", livebirthmar_perc, "%)"),
+    # Missing by MNAR
+    missing_mnar = paste0(missing_mnar, " (", missing_mnar_perc, "%)"),
+    missing_mnar_t = paste0(missing_mnar_med, " (", missing_mnar_p25, ", ", missing_mnar_p75, ")") #,
+    # miscarriage_mar_mnar = paste0(miscarriage_marmnar, " (", miscarriagemarmnar_perc, "%)"),
+    # stillbirth_mar_mnar = paste0(stillbirth_marmnar, " (", stillbirthmarmnar_perc, "%)"),
+    # livebirth_mar_mnar = paste0(livebirth_marmnar, " (", livebirthmarmnar_perc, "%)")
+  ) %>% 
+  select(scenario, trt, n_low, n_med, n_high, n_pnc_4, n_pnc_7, n_pnc_16, n_miscarriage_all,
+         n_stillbirth_all, n_livebirth_all, miscarriage_t, stillbirth_t, livebirth_t,
+         missing_mar, missing_mar_t, missing_mnar, missing_mnar_t
+         # miscarriage_mar, stillbirth_mar, livebirth_mar, miscarriage_mar_mnar, 
+         # stillbirth_mar_mnar, livebirth_mar_mnar
+         ) %>% 
+  pivot_longer(
+    cols = !c(scenario, trt),
+    names_to = "SummaryStatistic",
+    values_to = "value"
+  ) %>% 
+  pivot_wider(
+    names_from = c(scenario, trt),
+    values_from = value
+  ) %>% 
+  kbl() %>% 
+  kable_classic() %>% 
+  add_header_above(c(" " = 1, "Non-Initiators" = 1, "Initiators" = 1, "Non-Initiators" = 1, "Initiators" = 1)) %>% 
+  add_header_above(c(" " = 1, "Test 1" = 2, "Test 2" = 2)) %>% 
+  pack_rows("Number (%) of Pregnancies by Severity", 1, 3) %>% 
+  pack_rows("Number (%) of Pregnancies by First PNC", 4, 6) %>% 
+  pack_rows("Number (%) of Pregnancy Outcomes", 7, 9) %>% 
+  pack_rows("Median (IQR) of Pregnancy Outcome Timing", 10, 12) %>% 
+  pack_rows("Number (%) of Pregnancy Outcomes LTFU per MAR", 13, 13) %>% 
+  pack_rows("Median (IQR) of LTFU Timing per MAR", 14, 14) %>% 
+  pack_rows("Number (%) of Pregnancies LTFU per MAR+MNAR", 15, 15) %>% 
+  pack_rows("Median (IQR) of LTFU Timing per MAR+MNAR", 16, 16)
+
+```
+
+
+```{r eval=FALSE}
+
+# Focus on MAR + MNAR for now
+test %>% 
+  group_by(trt, severity) %>% 
+  summarize(
+    n = n(),
+    # Distribution of outcomes
+    n_miscarriage_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20),
+    n_stillbirth_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20),
+    n_livebirth_all = sum(pregout_pre_miss == "livebirth"),
+    # Distribution of observed outcomes
+    n_miscarriage_obs = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20 & ltfu_mar_mnar == "not"),
+    n_stillbirth_obs = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20 & ltfu_mar_mnar == "not"),
+    n_livebirth_obs = sum(pregout_pre_miss == "livebirth" & ltfu_mar_mnar == "not"),
+    # Distribution by first pnc encounter
+    n_pnc_4 = sum(pnc_wk == 4),
+    n_pnc_7 = sum(pnc_wk == 7),
+    n_pnc_16 = sum(pnc_wk == 16),
+    .groups = 'keep'
+  )
+
+## QUESTION -- IS IT IMPOSSIBLE TO HAVE AN OUTCOME AT 20 WEEKS OF GESTATION?? CHECK THIS -- SURPRISED SEE NONE.
+## Seeing no stillbirths in trt'd in highest severity - make sure that there's not a systematic reason for that.
+# Should severity influence the timing of the first PNC encounter? Feels like a bit too much to do.
+
+```
+
