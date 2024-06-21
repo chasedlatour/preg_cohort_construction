@@ -46,7 +46,7 @@ generate_dgm <- function(param_file, save_name_gen,
     n = 15000, #5000,
     p_sev_dist = c(1/3, 1/3, 1/3), # Even distribution
     p_trt_sev = c(0.35, 0.50, 0.65),
-    p_indx_pnc = c(0.27, 0.335, 0.395),
+    p_indx_pnc = c(0.23, 0.33, 0.44), #c(0.27, 0.335, 0.395),
     potential_preg_trt = potential_preg_trt,
     potential_preg_untrt = potential_preg_untrt,
     potential_preec_untrt = potential_preec_untrt,

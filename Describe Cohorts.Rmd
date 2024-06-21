@@ -70,46 +70,57 @@ describe_cohort <- function(dataset){
       pnc16_perc = round(100*n_pnc_16/n(),2),
       
       # Distribution of outcomes
-      n_miscarriage_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20),
+      n_miscarriage_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 18),
       miscarriageall_p = round(100*n_miscarriage_all / n(),2),
-      n_stillbirth_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20),
+      n_stillbirth_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 18),
       stillbirthall_p = round(100*n_stillbirth_all/n(), 2),
       n_livebirth_all = sum(pregout_pre_miss == "livebirth"),
       livebirthall_p = round(100*n_livebirth_all/n()),
       
       # Timing of those outcomes
-      miscarriageall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20], 
-                                    probs = 0.25),
-      miscarriageall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20],
-                                    probs = 0.75),
-      miscarriageall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20]),
-      stillbirthall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20],
-                                   probs = 0.25),
-      stillbirthall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20],
-                                   0.75),
-      stillbirthall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20]),
+      miscarriageall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" &
+                                                         pregout_t_pre_miss < 18], 
+                                    probs = 0.25)+2,
+      miscarriageall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" &
+                                                         pregout_t_pre_miss < 18],
+                                    probs = 0.75)+2,
+      miscarriageall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" &
+                                                       pregout_t_pre_miss < 18])+2,
+      
+      stillbirthall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" &
+                                                        pregout_t_pre_miss >= 18],
+                                   probs = 0.25)+2,
+      stillbirthall_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" &
+                                                        pregout_t_pre_miss >= 18],
+                                   0.75)+2,
+      stillbirthall_med = median(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" &
+                                                      pregout_t_pre_miss >= 18])+2,
+      
       livebirth_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "livebirth"],
-                               probs = 0.25),
+                               probs = 0.25)+2,
       livebirth_p75 = quantile(pregout_t_pre_miss[pregout_pre_miss == "livebirth"],
-                               probs = 0.75),
-      livebirth_med = median(pregout_t_pre_miss[pregout_pre_miss == "livebirth"]),
+                               probs = 0.75)+2,
+      livebirth_med = median(pregout_t_pre_miss[pregout_pre_miss == "livebirth"])+2,
       
       # Distribution of Preeclampsia
       n_preec = sum(preeclampsia_pre_miss == 1),
       n_preec_perc = round(100*n_preec/n(),2),
+      preec_25 = quantile(pregout_t_pre_miss[preeclampsia_pre_miss == 1], probs=0.25)+2,
+      preec_75 = quantile(pregout_t_pre_miss[preeclampsia_pre_miss == 1], probs=0.75)+2,
+      preec_med = quantile(pregout_t_pre_miss[preeclampsia_pre_miss == 1], probs=0.50)+2,
       
       # Distribution of uncensored outcomes
       missing_mar = sum(ltfu_mar != "not"),
       missing_mar_perc = round(100*missing_mar/n(), 2),
-      missing_mar_p25 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.25),
-      missing_mar_p75 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.75),
-      missing_mar_med = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.5),
+      missing_mar_p25 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.25)+2,
+      missing_mar_p75 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.75)+2,
+      missing_mar_med = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.5)+2,
       
       missing_mnar = sum(ltfu_mar_mnar != "not"),
       missing_mnar_perc = round(100*missing_mnar/n(), 2),
-      missing_mnar_p25 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs=0.25),
-      missing_mnar_p75 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.75),
-      missing_mnar_med = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.5),
+      missing_mnar_p25 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs=0.25)+2,
+      missing_mnar_p75 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.75)+2,
+      missing_mnar_med = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.5)+2,
       
       .groups = 'keep'
     ) %>% 
@@ -132,6 +143,7 @@ describe_cohort <- function(dataset){
       livebirth_t = paste0(livebirth_med, " (", livebirth_p25, ", ", livebirth_p75, ")"),
       # Preeclampsia
       n_preeclampsia = paste0(n_preec, " (", n_preec_perc, "%)"),
+      preeclampsia_t = paste0(preec_med, " (", preec_25, ", ", preec_75, ")"),
       # Missing by MAR
       missing_mar = paste0(missing_mar, " (", missing_mar_perc, "%)"),
       missing_mar_t = paste0(missing_mar_med, " (", missing_mar_p25, ", ", missing_mar_p75, ")"),
@@ -141,7 +153,7 @@ describe_cohort <- function(dataset){
     ) %>% 
     select(scenario, trt, n_low, n_med, n_high, n_pnc_4, n_pnc_7, n_pnc_16, n_miscarriage_all,
            n_stillbirth_all, n_livebirth_all, miscarriage_t, stillbirth_t, livebirth_t,
-           n_preeclampsia,
+           n_preeclampsia, preeclampsia_t,
            missing_mar, missing_mar_t, missing_mnar, missing_mnar_t
            ) %>% 
     pivot_longer(
@@ -162,10 +174,11 @@ describe_cohort <- function(dataset){
     pack_rows("Number (%) of Pregnancy Outcomes", 7, 9) %>% 
     pack_rows("Median (IQR) of Pregnancy Outcome Timing", 10, 12) %>% 
     pack_rows("Number (%) of Pregnancies that Experienced Preeclampsia", 13, 13) %>% 
-    pack_rows("Number (%) of Pregnancy Outcomes LTFU per MAR", 14, 14) %>% 
-    pack_rows("Median (IQR) of LTFU Timing per MAR", 15, 15) %>% 
-    pack_rows("Number (%) of Pregnancies LTFU per MAR+MNAR", 16, 16) %>% 
-    pack_rows("Median (IQR) of LTFU Timing per MAR+MNAR", 17, 17)
+    pack_rows("Median(IQR) of Preeclampsia Timing", 14, 14) %>% 
+    pack_rows("Number (%) of Pregnancy Outcomes LTFU per MAR", 15, 15) %>% 
+    pack_rows("Median (IQR) of LTFU Timing per MAR", 16, 16) %>% 
+    pack_rows("Number (%) of Pregnancies LTFU per MAR+MNAR", 17, 17) %>% 
+    pack_rows("Median (IQR) of LTFU Timing per MAR+MNAR", 18, 18)
       
   return(hold)
   
@@ -229,11 +242,12 @@ describe %>%
   mutate(Treatment = ifelse(trt == 0, 
                             "Non-Initiation", 
                             "Initiation")) %>% 
-  ggplot(aes(x = pregout_t_pre_miss, y = after_stat(density*width))) +
+  ggplot(aes(x = (pregout_t_pre_miss+2), y = after_stat(density*width))) +
     geom_histogram(alpha = 0.2, position = "identity", bins = 41) +
+    #geom_freqpoly(bins = 41) +
     facet_grid(scenario ~ Treatment, labeller = labeller(scenario = label_both, Treatment = label_value), switch = "y") +
-  xlab("Gestational Week of Outcome") +
-  ylab("Proportion of of Outcomes") +
+  xlab("Gestational Week of Outcome from LMP") +
+  ylab("Proportion of Respective Outcomes") +
   theme_bw()
 
 ```
@@ -242,38 +256,72 @@ All outcomes, stratified by outcome type.
 
 ```{r}
 
-describe_cohort(describe)
 
 describe %>% 
   mutate(Treatment = ifelse(trt == 0, 
                             "Non-Initiation", 
                             "Initiation")) %>% 
-  ggplot(aes(x = pregout_t_pre_miss, y = after_stat(density*width), color = pregout_pre_miss, fill = pregout_pre_miss)) +
+  ggplot(aes(x = (pregout_t_pre_miss+2), y = after_stat(density*width), color = pregout_pre_miss, fill = pregout_pre_miss)) +
     geom_histogram(alpha = 0.2, position = "identity", bins = 41) +
+    #geom_freqpoly(bins = 41) +
     facet_grid(scenario ~ Treatment, labeller = labeller(scenario = label_both, Treatment = label_value), switch = "y") +
-  xlab("Gestational Week of Outcome") +
+  xlab("Gestational Week of Outcome from LMP") +
   ylab("Proportion of of Outcomes") +
+  #scale_x_continuous(breaks = seq(4, 41, by =1)) +
   theme_bw()
 
 
-# # Look at the true count distribution
-# describe %>%
-#   group_by(scenario, pregout_t_pre_miss) %>%
-#   summarize(
-#     n_abortion_trt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20 & trt == 1),
-#     n_abortion_untrt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 20 & trt == 0),
-#     n_stillbirth_trt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20 & trt == 1),
-#     n_stillbirth_untrt = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 20 & trt == 0),
-#     n_livebirth_trt = sum(pregout_pre_miss == "livebirth" & trt == 1),
-#     n_livebirth_ujntrt = sum(pregout_pre_miss == "livebirth" & trt == 0),
-#     .groups = 'keep'
-#   ) %>%
-#   kbl() %>%
-#   kable_classic()
+```
+
+Distribution of gestational age at miscarriage.
+
+```{r}
+
+table(subset(describe, pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 18)$pregout_t_pre_miss+2)
 
 ```
 
+Distribution of gestational age at stillbirth.
+
+```{r}
+
+table(subset(describe, pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 18)$pregout_t_pre_miss+2)
+
+```
+
+Distribution of gestational age at livebirth.
+
+```{r}
+
+table(subset(describe, pregout_pre_miss == "livebirth")$pregout_t_pre_miss+2)
+
+```
+
+
+## Distribution of Preeclampsia
+
+```{r}
+
+describe %>% 
+  filter(preeclampsia_pre_miss == 1) %>% 
+  mutate(Treatment = ifelse(trt == 0, 
+                            "Non-Initiation", 
+                            "Initiation")) %>% 
+  ggplot(aes(x = (pregout_t_pre_miss+2), y = after_stat(density*width))) +
+    geom_histogram(alpha = 0.2, position = "identity", bins = 41) +
+    #geom_freqpoly(bins = 41) +
+    facet_grid(scenario ~ Treatment, labeller = labeller(scenario = label_both, Treatment = label_value), switch = "y") +
+  xlab("Gestational Week of Preeclampsia from LMP") +
+  ylab("Proportion of Preeclampsia Outcomes") +
+  theme_bw()
+
+```
+
+# Summary Statistics
+
 Now look at summary statistics for the cohort
+
+## Whole Cohort
 
 ```{r}
 
@@ -281,13 +329,31 @@ describe_cohort(describe)
 
 ```
 
-Look at the distribution among those with low severity disease.
+## Low Severity Disease
 
 ```{r}
 
 describe_cohort(subset(describe, severity == 0))
 
 ```
+
+## Medium Severity Disease
+
+```{r}
+
+describe_cohort(subset(describe, severity == 1))
+
+```
+
+## High Severity Disease
+
+```{r}
+
+describe_cohort(subset(describe, severity == 2))
+
+```
+
+
 
 
 ```{r eval=FALSE}
