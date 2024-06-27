@@ -16,6 +16,7 @@ data <- readRDS("ab08preec08_beta001_gamma01_001.rds") %>%
   mutate(scenario = "test1")
 
 library(survival)
+library(rlang)
 
 
 
@@ -92,6 +93,10 @@ risks_obsdel_mar_mnar <- calculate_risks(subset(data1, obs_delivery_mar_mnar == 
 
 risks_obsout_mar <- calculate_risks(subset(data1, obs_outcome_mar == 1), pnc_dist, sev_dist)
 risks_obsout_mar_mnar <- calculate_risks(subset(data1, obs_outcome_mar_mnar == 1), pnc_dist, sev_dist)
+
+# Time-to-event analyses
+tte_mar <- calculate_aj_risks(dataset, pnc_dist, sev_dist, "final_pregout_mar_tte")
+tte_mnar <- calculate_aj_risks(dataset, pnc_dist, sev_dist, "final_pregout_marmnar_tte")
 
 
   
@@ -198,11 +203,10 @@ calculate_risks <- function(dataset, pnc_dist, sev_dist){
 
 
 ##############################################
-# FUNCTION: calculate_aj_risks()
-# PURPOSE: The purpose of this function to 
-# calculate the risk of preeclampsia in a 
-# closed cohort without right censoring. Only
-# one obs per person.
+# FUNCTION: aj_estimator()
+# PURPOSE: The purpose of this function is to 
+# implement the AJ estimator to estimate 
+# risks.
 
 # This implements non-parametric direct
 # standardization by the distribution of severity
@@ -210,127 +214,18 @@ calculate_risks <- function(dataset, pnc_dist, sev_dist){
 # average treatment effect (ATE).
 ##############################################
 
-
-calculate_aj_risks() <- function(dataset, pnc_dist, sev_dist){
+aj_estimator <- function(data_subset, time_var) {
+  time_var <- enquo(time_var)
   
-  
-  #COME BACK -- NEED TO DO THIS WITHIN STRATA OF PNC VISIT TIMING
-  
-  ### MAR Outcomes
-  
-  #jitter ties
-  dataset2 <- dataset %>% 
-    group_by(final_pregout_mar_tte) %>% 
-    add_tally() %>% 
-    ungroup() %>% 
-    mutate(
-      # Jitter event times
-      jitter = runif(nrow(dataset), min = -.01, max = .01), # N in the samp
-      time = ifelse(n>1, final_pregout_mar_tte + jitter, final_pregout_mar_tte)
-    )
-  
-  # Run the AJ model
-  aj <- survfit(Surv(time, factor(final_pregout_mar)) ~ trt, data = dataset2)
-  
-  mod <- summary(aj)
-  
-  summod <- data.frame(t = mod$time,
-                       r = mod$pstate[,2], 
-                       se = mod$std.err[,2],
-                       trt = c(rep(0, length(mod[["strata"]][mod[["strata"]] == "trt=0"])), 
-                               rep(1, length(mod[["strata"]][mod[["strata"]] == "trt=1"])))
-  ) %>%
-    filter(t < 43 + 0.5) %>%  # Deal with the jittering of outcomes
-    group_by(trt) %>% 
-    summarize(risk = last(r),
-              #se = last(se),
-              .groups = 'drop') %>% 
-    pivot_wider(names_from = trt,
-                values_from = risk,
-                #values_from = c(r, se), 
-                names_glue = "{.value}{trt}") %>% 
-    rowwise() %>% 
-    mutate(rr = risk1/risk0,
-           #selnrr = sqrt((1/r_0)^2 * se_0^2 + (1/r_1)^2*se_1^2),
-           #rr_lcl = exp(log(rr) - z*selnrr),
-           #rr_ucl = exp(log(rr) + z*selnrr),
-           rd = risk1 - risk0 #,
-           #se_rd = sqrt(se_1^2 + se_0^2),
-           #rd_lcl = rd - 1.96*se_rd,
-           #rd_ucl = rd + 1.96*se_rd,
-           #Estimator = "Aalen-Johanssen"
-           ) %>%
-    select(risk0, risk1, rr, #rr_lcl, rr_ucl,
-           rd #, rd_lcl, rd_ucl
-    )
-    
-  
-  
-  ### MNAR Outcomes
-  
-}
-
-
-
-calculate_aj_risks() <- function(dataset, pnc_dist, sev_dist){
-  
-  
-  #COME BACK -- NEED TO DO THIS WITHIN STRATA OF PNC VISIT TIMING
-  
-  ### MAR Outcomes
-  
-  #jitter ties
-  mar <- dataset %>% 
-    group_by(final_pregout_mar_tte) %>% 
-    add_tally() %>% 
-    ungroup() %>% 
-    mutate(
-      # Jitter event times
-      jitter = runif(nrow(dataset), min = -.01, max = .01), # N in the samp
-      time = ifelse(n>1, final_pregout_mar_tte + jitter, final_pregout_mar_tte)
-    )
-  
-  # Split the dataset by severity and pnc_wk
-  split_data <- split(mar, list(mar$severity, mar$pnc_wk))
-  
-  # Apply the aj_analysis function to each subset
-  results_list <- lapply(split_data, aj_mar)
-  
-  # Combine the results into a single data frame
-  results <- bind_rows(results_list, .id = "group")
-  
-  # Extract severity and pnc_wk from the group column
-  results <- results %>%
-    separate(group, into = c("severity", "pnc_wk"), sep = "\\.")
-  
-  # Convert severity and pnc_wk to their original data types if necessary
-  results <- results %>%
-    mutate(severity = as.numeric(severity),
-           pnc_wk = as.numeric(pnc_wk))
-
-  
-  ### MNAR Outcomes
-  
-}
-
-
-
-
-
-
-
-## AJ Function for MAR
-
-aj_mar <- function(data_subset) {
   # Jitter ties
   data_jittered <- data_subset %>% 
-    group_by(final_pregout_mar_tte) %>% 
+    group_by(!!time_var) %>% 
     add_tally(name = "count") %>%  # Use a different name for the tally counts
     ungroup() %>% 
     mutate(
       # Jitter event times
       jitter = runif(nrow(data_subset), min = -.01, max = .01),
-      time = ifelse(count > 1, final_pregout_mar_tte + jitter, final_pregout_mar_tte)
+      time = ifelse(count > 1, !!sym(quo_name(time_var)) + jitter, !!sym(quo_name(time_var)))
     )
   
   # Run the AJ model
@@ -351,73 +246,104 @@ aj_mar <- function(data_subset) {
     pivot_wider(names_from = trt,
                 values_from = risk,
                 names_glue = "{.value}{trt}") %>% 
-    rowwise() %>% 
-    mutate(rr = risk1 / risk0,
-           rd = risk1 - risk0
-    ) %>%
-    select(risk0, risk1, rr, rd)
+    select(risk0, risk1)
   
   return(summod)
 }
 
 
-## AJ Estimator
 
-aj_estimator <- function(dataset, outcome_var, outcome_var_t, t_val, rename){
+
+##############################################
+# FUNCTION: calculate_aj_risks()
+# PURPOSE: The purpose of this function is to 
+# calculate the risk of preeclampsia in a 
+# cohort with right censoring using an AJ
+# estimator.
+
+# This implements non-parametric direct
+# standardization by the distribution of severity
+# at baseline to estimate the population
+# average treatment effect (ATE).
+##############################################
+
+
+# Define the calculate_aj_risks function
+calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, time_var) {
+  time_var <- enquo(time_var)
   
-  z <- qnorm(0.975)
-  
-  #jitter ties
-  #set.seed(1234)
-  # Not sure if should set seed for jittering outcomes
-  dataset2 <- dataset %>% 
-    group_by(get(outcome_var_t)) %>% 
-    add_tally() %>% 
+  # Jitter ties
+  mar <- dataset %>% 
+    group_by(!!time_var) %>% 
+    add_tally(name = "count") %>% 
     ungroup() %>% 
     mutate(
       # Jitter event times
-      jitter = runif(nrow(dataset), min = -.01, max = .01), # N in the samp
-      time = ifelse(n>1, get(outcome_var_t) + jitter, get(outcome_var_t))
+      jitter = runif(nrow(dataset), min = -.01, max = .01), 
+      time = ifelse(count > 1, !!sym(quo_name(time_var)) + jitter, !!sym(quo_name(time_var)))
     )
   
-  # Run the AJ model
-  aj <- survfit(Surv(time, factor(get(outcome_var))) ~ trt, data = dataset2)
+  # Split the dataset by severity and pnc_wk
+  split_data <- split(mar, list(mar$severity, mar$pnc_wk))
   
-  mod <- summary(aj)
+  # Apply the aj_mar function to each subset
+  results_list <- lapply(split_data, function(subset) aj_estimator(subset, !!sym(quo_name(time_var))))
   
-  summod <- data.frame(t = mod$time,
-                       r = mod$pstate[,2], 
-                       se = mod$std.err[,2],
-                       trt = c(rep(0, length(mod[["strata"]][mod[["strata"]] == "trt=0"])), 
-                               rep(1, length(mod[["strata"]][mod[["strata"]] == "trt=1"])))
-  ) %>%
-    filter(t < t_val+0.5) %>%  # Deal with the jittering of outcomes
-    group_by(trt) %>% 
-    summarize(r = last(r),
-              se = last(se),
-              .groups = 'drop') %>% 
-    pivot_wider(names_from = trt,
-                values_from = c(r, se), 
-                names_glue = "{.value}_{trt}") %>% 
+  # Combine the results into a single data frame
+  results <- bind_rows(results_list, .id = "group")
+  
+  # Extract severity and pnc_wk from the group column
+  results <- results %>%
+    separate(group, into = c("severity", "pnc_wk"), sep = "\\.")
+  
+  # Convert severity and pnc_wk to their original data types if necessary
+  results <- results %>%
+    mutate(severity = as.numeric(severity),
+           pnc_wk = as.numeric(pnc_wk))
+  
+  # Left merge the severity distribution onto the risks
+  results_sev_merge <- left_join(results, sev_dist, by = c("severity" = "severity")) %>% 
     rowwise() %>% 
-    mutate(rr = r_1/r_0,
-           selnrr = sqrt((1/r_0)^2 * se_0^2 + (1/r_1)^2*se_1^2),
-           rr_lcl = exp(log(rr) - z*selnrr),
-           rr_ucl = exp(log(rr) + z*selnrr),
-           rd = r_1 - r_0,
-           se_rd = sqrt(se_1^2 + se_0^2),
-           rd_lcl = rd - 1.96*se_rd,
-           rd_ucl = rd + 1.96*se_rd,
-           Estimator = "Aalen-Johanssen") %>%
-    select(r_0, r_1, rr, rr_lcl, rr_ucl,
-           rd, rd_lcl, rd_ucl
-    )  %>% 
-    rename_all((~ paste(rename, .)))
+    mutate(risk0_std = risk0 * prop,
+           risk1_std = risk1 * prop) %>% 
+    group_by(pnc_wk) %>% 
+    summarize(risk0 = sum(risk0_std),
+              risk1 = sum(risk1_std))
   
-  return(summod)
+  # Calculate the overall risks
+  risk0 <- sum(results_sev_merge$risk0 * pnc_dist)
+  risk1 <- sum(results_sev_merge$risk1 * pnc_dist)
+  overall_risks <- tibble(
+    pnc_wk = 'overall',
+    risk0 = risk0,
+    risk1 = risk1
+  )
   
+  # Final risks dataset
+  risks <- rbind(results_sev_merge, overall_risks) %>% 
+    rowwise() %>% 
+    mutate(rd = risk1 - risk0,
+           rr = risk1 / risk0)
   
+  return(risks)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
