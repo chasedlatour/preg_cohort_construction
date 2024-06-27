@@ -8,14 +8,7 @@
 #####################################################
 
 
-#####################################################
-# Pull in the necessary libraries and functions
-#####################################################
-library(tidyverse)
-library(readxl)
 
-# Pull in the data generation functions - These functions create the raw data
-source("Data generation functions.R")
 
 
 

@@ -24,7 +24,6 @@ generate_cohort <- function(data, beta12, gamma0, gamma1, save_name_cohort){
   p_sev <- 1 - 0.8^(1/40) # Weekly prob (over 40 weeks) of being LTFU at lowest severity
   b0_sev <- log(p_sev / (1-p_sev)) # beta 0 in the logistic regression for LTFU due to severity is NOT varied across scenarios
   
-  
   ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
   p_miss_outcome <- c(log(gamma0/(1-gamma0)), 
                       log(gamma1/(1-gamma1))
