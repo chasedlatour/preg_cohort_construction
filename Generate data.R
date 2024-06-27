@@ -20,66 +20,6 @@ source("Data generation functions.R")
 
 
 
-
-
-
-#####################################################
-# Function can be used to generate each scenario with 
-# the specified inputs.
-#####################################################
-
-generate_dgm <- function(param_file, save_name_gen,
-                         rr_abortion, rr_preec){
-  
-  
-  ## Upload the parameter Excel files.
-  potential_preg_untrt <- read_xlsx(param_file, sheet = "potential_preg_untrt")
-  potential_preg_trt <- read_xlsx(param_file, sheet = "potential_preg_trt")
-  potential_preec_untrt <- read_xlsx(param_file, sheet = "potential_preec_untrt")
-  potential_preec_trt <- read_xlsx(param_file, sheet = "potential_preec_trt")
-  revised_preg <- read_xlsx(param_file, sheet = "postpreec_preg")
-  pnc_prob <- read_xlsx(param_file, sheet = "pnc_prob")
-  
-  ## Create the parameter list that are the same across simulations
-  params_list_gen <- list(
-    n_sim = 1,
-    n = 15000, #5000,
-    p_sev_dist = c(1/3, 1/3, 1/3), # Even distribution
-    p_trt_sev = c(0.35, 0.50, 0.65),
-    p_indx_pnc = c(0.23, 0.33, 0.44), #c(0.27, 0.335, 0.395),
-    potential_preg_trt = potential_preg_trt,
-    potential_preg_untrt = potential_preg_untrt,
-    potential_preec_untrt = potential_preec_untrt,
-    potential_preec_trt = potential_preec_trt,
-    revised_preg = revised_preg,
-    pnc_prob = pnc_prob
-  )
-  
-  ## Generate all the potential outcomes
-  
-  all_outcomes <- do.call(generate, params_list_gen) %>% 
-    # Save the data generation values
-    mutate(rr_trt_abortion = rr_abortion,
-           rr_trt_preec = rr_preec)
-  
-  # Save the RDS file -- Potentially important for bootstrapping SEs
-  saveRDS(all_outcomes, save_name_gen)
-  
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ##################################################
 # RR, Trt-Abortion = 0.8
 # RR, Trt-Preeclampsia = 0.8
