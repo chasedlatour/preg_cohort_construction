@@ -10,89 +10,171 @@
 # simulations easily.
 #####################################################
 
+library(tidyverse)
+library(survival)
+library(rlang)
+
 ## Upload the dataset for testing
 #### Missing: Beta1 = 0.01, Gamma0 = 0.1, Gamma1 = 0.001
 data <- readRDS("ab08preec08_beta001_gamma01_001.rds") %>% 
   mutate(scenario = "test1")
 
-library(survival)
-library(rlang)
 
 
 
-# Get the distribution by timing of first PNC encounter
-pnc_dist <- (data %>% 
-  group_by(pnc_wk) %>% 
-  summarize(prop = n() / nrow(data)))$prop
 
-sev_dist <- data %>% 
-  group_by(severity) %>% 
-  summarize(prop = n() / nrow(data),
-            .groups = 'drop')
+#########################################
+# FUNCTION: prep_data_for_analysis()
+# PURPOSE: Prepare the data for analysis
+# functions.
+#########################################
 
-# First, need to do some data cleaning
-data1 <- data %>% 
-  mutate(
-    
-    # Make indicator variables for observed delivery
-    obs_delivery_mar = ifelse(ltfu_mar == 'not' & pregout_t_mar >= 20,
-                              1,
-                              0),
-    obs_delivery_mar_mnar = ifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 20,
-                                   1,
-                                   0),
-    
-    # Make indicator for observed pregnancy outcome
-    obs_outcome_mar = ifelse(ltfu_mar == 'not',
-                             1,
-                             0),
-    obs_outcome_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
-                                  1,
-                                  0),
-    
-    
-    # Establish the time-to-event outcomes for survival analyses
-    ## 0 = censor
-    ## 1 = preeclampsia, regardless of preg outcome
-    ## 2 = fetal death wo preeclampsia
-    ## 3 = live birth wo preeclampsia
-    # Calculate times to event
-    
-    # MAR 
-    ## Outcome indicator
-    final_pregout_mar = case_when(pregout_mar == 'unknown' ~ 0,
-                                  preeclampsia_mar == 1 ~ 1,
-                                  pregout_mar == 'fetaldeath' ~ 2,
-                                  pregout_mar == 'livebirth' ~ 3),
-    
-    ## Time to event - ADDED 1 TO INCLUDE IMMEDIATE CENSORS - CHECK THIS.
-    final_pregout_mar_tte = ifelse(pregout_mar == 'unknown',
-                                   t_ltfu_mar + 1,
-                                   pregout_t_mar + 1),
-    
-    # MAR+MNAR
-    ## Outcome indicator
-    final_pregout_mar_mnar = case_when(pregout_mar_mnar == 'unknown' ~ 0,
-                                       preeclampsia_mar == 1 ~ 1,
-                                       pregout_mar == 'fetaldeath' ~ 2,
-                                       pregout_mar == 'livebirth' ~ 3),
-    
-    ## Time to event - ADDED 1 TO INCLUDE IMMEDIATE CENSORS.
-    final_pregout_marmnar_tte = ifelse(pregout_mar == 'unknown',
-                                       t_ltfu_mar_mnar + 1,
-                                       pregout_t_mar_mnar + 1)
-    
-  )
+prep_data_for_analysis <- function(data){
+  
+  # # Get the distribution by timing of first PNC encounter
+  # pnc_dist <- (data %>% 
+  #                group_by(pnc_wk) %>% 
+  #                summarize(prop = n() / nrow(data)))$prop
+  # 
+  # sev_dist <- data %>% 
+  #   group_by(severity) %>% 
+  #   summarize(prop = n() / nrow(data),
+  #             .groups = 'drop')
+  
+  # First, need to do some data cleaning
+  hold <- data %>% 
+    mutate(
+      
+      # Make indicator variables for observed delivery
+      obs_delivery_mar = ifelse(ltfu_mar == 'not' & pregout_t_mar >= 20,
+                                1,
+                                0),
+      obs_delivery_mar_mnar = ifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 20,
+                                     1,
+                                     0),
+      
+      # Make indicator for observed pregnancy outcome
+      obs_outcome_mar = ifelse(ltfu_mar == 'not',
+                               1,
+                               0),
+      obs_outcome_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
+                                    1,
+                                    0),
+      
+      
+      # Establish the time-to-event outcomes for survival analyses
+      ## 0 = censor
+      ## 1 = preeclampsia, regardless of preg outcome
+      ## 2 = fetal death wo preeclampsia
+      ## 3 = live birth wo preeclampsia
+      # Calculate times to event
+      
+      # MAR 
+      ## Outcome indicator
+      final_pregout_mar = case_when(pregout_mar == 'unknown' ~ 0,
+                                    preeclampsia_mar == 1 ~ 1,
+                                    pregout_mar == 'fetaldeath' ~ 2,
+                                    pregout_mar == 'livebirth' ~ 3),
+      
+      ## Time to event - ADDED 1 TO INCLUDE IMMEDIATE CENSORS - CHECK THIS.
+      final_pregout_mar_tte = ifelse(pregout_mar == 'unknown',
+                                     t_ltfu_mar + 1,
+                                     pregout_t_mar + 1),
+      
+      # MAR+MNAR
+      ## Outcome indicator
+      final_pregout_mar_mnar = case_when(pregout_mar_mnar == 'unknown' ~ 0,
+                                         preeclampsia_mar == 1 ~ 1,
+                                         pregout_mar == 'fetaldeath' ~ 2,
+                                         pregout_mar == 'livebirth' ~ 3),
+      
+      ## Time to event - ADDED 1 TO INCLUDE IMMEDIATE CENSORS.
+      final_pregout_marmnar_tte = ifelse(pregout_mar == 'unknown',
+                                         t_ltfu_mar_mnar + 1,
+                                         pregout_t_mar_mnar + 1)
+      
+      # Sensitivity analysis
+      
+      ## Outcome immediately upon censoring
+      
+      ## No outcome and go the full follow-up without outcome. 
+      
+    )
+  
+  hold2 <- split(hold,hold$sim_id)
+  
+  return(hold2)
+  
+}
+
+#########################################
+# FUNCTION: conduct_analysis()
+# PURPOSE: Conduct the analyses for the
+# dataset.
+#########################################
+
+conduct_analysis <- function(data){
+  
+  # Get the pnc distribution for each simulation
+  pnc_dist <- lapply(hold2, get_pnc_dist)
+  
+  # Get the severity distribution for each simulation
+  sev_dist <- lapply(hold2, get_severity_dist)
+  
+  # Get the risks from the potential outcomes
+  potential_risks <- mapply(calculate_pot_risks, hold2, pnc_dist)
+  
+  # Get the risks among observed deliveries
+  ## MAR:
+  observed_deliveries_mar <- mapply(function(hold2, pnc_dist, sev_dist) {
+    data_subset <- subset(hold2, obs_delivery_mar == 1)
+    hold2 %>% 
+      filter(obs_delivery_mar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist)
+  }, hold2, pnc_dist, sev_dist)
+  ## MNAR:
+  observed_deliveries_mar_mnar <- mapply(function(hold2, pnc_dist, sev_dist) {
+    data_subset <- subset(hold2, obs_delivery_mar_mnar == 1)
+    hold2 %>% 
+      filter(obs_delivery_mar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist)
+  }, hold2, pnc_dist, sev_dist)
+  
+  # Get the risks among observed pregnancy outcomes
+  ## MAR
+  observed_outcomes_mar <- mapply(function(hold2, pnc_dist, sev_dist) {
+    data_subset <- subset(hold2, obs_outcome_mar == 1)
+    hold2 %>% 
+      filter(obs_delivery_mar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist)
+  }, hold2, pnc_dist, sev_dist)
+  ## MNAR
+  observed_outcomes_mar_mnar <- mapply(function(hold2, pnc_dist, sev_dist) {
+    data_subset <- subset(hold2, obs_outcome_mar_mnar == 1)
+    hold2 %>% 
+      filter(obs_delivery_mar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist)
+  }, hold2, pnc_dist, sev_dist)
+  
+  # Time-to-event analyses
+  ## MAR
+  tte_mar <- mapply(calculate_aj_risks, hold2, pnc_dist, sev_dist, MoreArgs = list(time_var = "final_pregout_mar_tte"))
+  ## MNAR
+  tte_mar_mnar <- mapply(calculate_aj_risks, hold2, pnc_dist, sev_dist, MoreArgs = list(time_var = "final_pregout_marmnar_tte"))
+  
+}
+
+
 
 # Calculate the risks among cohorts with no right-censoring.
 
-pot_risks <- calculate_pot_risks (data1, pnc_dist)
-
-risks_obsdel_mar <- calculate_risks(subset(data1, obs_delivery_mar == 1), pnc_dist, sev_dist)
-risks_obsdel_mar_mnar <- calculate_risks(subset(data1, obs_delivery_mar_mnar == 1), pnc_dist, sev_dist)
-
-risks_obsout_mar <- calculate_risks(subset(data1, obs_outcome_mar == 1), pnc_dist, sev_dist)
-risks_obsout_mar_mnar <- calculate_risks(subset(data1, obs_outcome_mar_mnar == 1), pnc_dist, sev_dist)
+# pot_risks <- calculate_pot_risks(data1, pnc_dist)
+# 
+# risks_obsdel_mar <- calculate_risks(subset(data1, obs_delivery_mar == 1), pnc_dist, sev_dist)
+# risks_obsdel_mar_mnar <- calculate_risks(subset(data1, obs_delivery_mar_mnar == 1), pnc_dist, sev_dist)
+# 
+# risks_obsout_mar <- calculate_risks(subset(data1, obs_outcome_mar == 1), pnc_dist, sev_dist)
+# risks_obsout_mar_mnar <- calculate_risks(subset(data1, obs_outcome_mar_mnar == 1), pnc_dist, sev_dist)
 
 # Time-to-event analyses
 tte_mar <- calculate_aj_risks(dataset, pnc_dist, sev_dist, "final_pregout_mar_tte")
@@ -100,6 +182,49 @@ tte_mnar <- calculate_aj_risks(dataset, pnc_dist, sev_dist, "final_pregout_marmn
 
 
   
+
+
+
+##############################################
+# FUNCTION: get_pnc_dist()
+# PURPOSE: The purpose of this function is to 
+# get the distribution of patients by the
+# gestational week of their first pnc 
+# encounter.
+##############################################
+
+get_pnc_dist <- function(data){
+  
+  pnc_dist <- (data %>%
+                 group_by(pnc_wk) %>%
+                 summarize(prop = n() / nrow(data)))$prop
+  
+  return(pnc_dist)
+  
+}
+
+
+
+##############################################
+# FUNCTION: get_severity_dist()
+# PURPOSE: The purpose of this function is to 
+# get the distribution of patients by 
+# disease severity at baseline.
+##############################################
+
+get_severity_dist <- function(data){
+  
+  sev_dist <- data %>%
+    group_by(severity) %>%
+    summarize(prop = n() / nrow(data),
+              .groups = 'drop')
+  
+  return(sev_dist)
+  
+}
+
+
+
 
 
 ##############################################
