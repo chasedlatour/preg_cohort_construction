@@ -29,6 +29,8 @@ source("create cohort functions.R")
 # Generate the data
 #####################################################
 
+n_sim <- 1
+n <- 15000
 
 ##################################################
 # RR, Trt-Abortion = 0.8
@@ -46,7 +48,13 @@ save_name_gen <- "DGM - Abortion08Preeclampsia08.rds"
 # All RDS files are saved
 set.seed(1234)
 set.seed(5678)
-generate_dgm(param_file, save_name_gen, rr_abortion, rr_preec)
+all_outcomes <- generate_dgm(n_sim, n, param_file, rr_abortion, rr_preec)
+
+# For multiple, optimize this somehow
+#all_outcomes <- map_dfr(1:n_sim, ~generate_dgm(.x, n, param_file, rr_abortion, rr_preec))
+
+# Save the RDS file -- Potentially important for bootstrapping SEs
+saveRDS(all_outcomes, save_name_gen)
 
 
 ###### 
@@ -56,6 +64,10 @@ generate_dgm(param_file, save_name_gen, rr_abortion, rr_preec)
 
 #####################################################
 # Create the analytic cohorts.
+
+# NEXT STEP: DETERMINE IF NEEDS TO BE MODIFIED TO 
+# RUN FOR EACH SIMULATION SEPARATELY.
+# MAYBE START SPLIT_DATA HERE.
 #####################################################
 
 

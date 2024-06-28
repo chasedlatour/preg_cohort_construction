@@ -17,7 +17,7 @@
 # the specified inputs.
 #####################################################
 
-generate_dgm <- function(param_file, save_name_gen,
+generate_dgm <- function(n_sim, n, param_file,
                          rr_abortion, rr_preec){
   
   
@@ -31,8 +31,8 @@ generate_dgm <- function(param_file, save_name_gen,
   
   ## Create the parameter list that are the same across simulations
   params_list_gen <- list(
-    n_sim = 1,
-    n = 15000, #5000,
+    n_sim = n_sim,
+    n = n, #5000,
     p_sev_dist = c(1/3, 1/3, 1/3), # Even distribution
     p_trt_sev = c(0.35, 0.50, 0.65),
     p_indx_pnc = c(0.23, 0.33, 0.44), #c(0.27, 0.335, 0.395),
@@ -51,8 +51,7 @@ generate_dgm <- function(param_file, save_name_gen,
     mutate(rr_trt_abortion = rr_abortion,
            rr_trt_preec = rr_preec)
   
-  # Save the RDS file -- Potentially important for bootstrapping SEs
-  saveRDS(all_outcomes, save_name_gen)
+  return(all_outcomes)
   
 }
 

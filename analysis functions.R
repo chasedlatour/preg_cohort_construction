@@ -76,10 +76,15 @@ prep_data_for_analysis <- function(data){
                                     pregout_mar == 'fetaldeath' ~ 2,
                                     pregout_mar == 'livebirth' ~ 3),
       
-      ## Time to event - ADDED 1 TO INCLUDE IMMEDIATE CENSORS - CHECK THIS.
+      ## Time to event 
       final_pregout_mar_tte = ifelse(pregout_mar == 'unknown',
-                                     t_ltfu_mar + 1,
-                                     pregout_t_mar + 1),
+                                     t_ltfu_mar,
+                                     pregout_t_mar),
+      
+      ## Add small constant to follow-up time for immediate censors - CHECK THIS.
+      final_pregout_mar_tte = ifelse(final_pregout_mar_tte == 0,
+                                     0.1,
+                                     final_pregout_mar_tte),
       
       # MAR+MNAR
       ## Outcome indicator
@@ -88,10 +93,15 @@ prep_data_for_analysis <- function(data){
                                          pregout_mar == 'fetaldeath' ~ 2,
                                          pregout_mar == 'livebirth' ~ 3),
       
-      ## Time to event - ADDED 1 TO INCLUDE IMMEDIATE CENSORS.
+      ## Time to event 
       final_pregout_marmnar_tte = ifelse(pregout_mar == 'unknown',
                                          t_ltfu_mar_mnar + 1,
-                                         pregout_t_mar_mnar + 1)
+                                         pregout_t_mar_mnar + 1),
+      
+      ## Add small constant to follow-up time for immediate censors - CHECK THIS.
+      final_pregout_marmnar_tte = ifelse(final_pregout_marmnar_tte == 0,
+                                         0.1,
+                                         final_pregout_marmnar_tte)
       
       # Sensitivity analysis
       
