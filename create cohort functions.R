@@ -17,7 +17,7 @@
 # missingness parameters.
 #####################################################
 
-generate_cohort <- function(data, beta12, gamma0, gamma1, save_name_cohort){
+generate_cohort <- function(data, beta12, gamma0, gamma1){ #, save_name_cohort
   
   # Set values that are going to hold for ALL DGMs and 
   # analytic samples
@@ -32,14 +32,33 @@ generate_cohort <- function(data, beta12, gamma0, gamma1, save_name_cohort){
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
   p_sev_beta = c(b0_sev, log(beta12 / (1-beta12)), log((2*beta12 / (1 - (2*beta12)))))
   
-  ## Select the observed cohort
-  all_outcomes2 <- create_cohort(data, p_sev_beta, p_miss_outcome) %>% 
+  # Add the simulation parameters to the dataset
+  hold <- data %>% 
     mutate(diff_beta1_beta2 = beta12,
            gamma_0 = gamma0,
            gamma_1 = gamma1)
   
+  ## Split the data by sim_id to maintain balance within the datasets
+  split_data <- split(hold, hold$sim_id)
+  
+  ## Select the observed cohort
+  hold2 <- mapply(
+    create_cohort,
+    split_data, 
+    MoreArgs = list(p_sev_beta = p_sev_beta, p_miss_outcome = p_miss_outcome),
+    SIMPLIFY = FALSE
+  )
+  
+  return(hold2)
+  
+  # all_outcomes2 <- create_cohort(data, p_sev_beta, p_miss_outcome) %>% 
+  #   mutate(diff_beta1_beta2 = beta12,
+  #          gamma_0 = gamma0,
+  #          gamma_1 = gamma1)
+    
+  
   # Save the RDS file
-  saveRDS(all_outcomes2, save_name_cohort)
+  #saveRDS(all_outcomes2, save_name_cohort)
   
 }
 
@@ -68,6 +87,7 @@ generate_cohort <- function(data, beta12, gamma0, gamma1, save_name_cohort){
 #####################################################
 
 ### CHASE -- RUN SOME SUMMARIES OF EACH OF THESE DATASETS TO MAKE SURE THEY LOOK AS EXPECTED
+
 create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
   
   # Get the probabilities associated with the betas for each

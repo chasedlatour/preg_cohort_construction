@@ -14,6 +14,8 @@
 #####################################################
 library(tidyverse)
 library(readxl)
+library(survival)
+library(rlang)
 
 # Pull in the data generation functions - These functions create the raw data
 source("Data generation functions.R")
@@ -29,8 +31,8 @@ source("create cohort functions.R")
 # Generate the data
 #####################################################
 
-n_sim <- 1
-n <- 15000
+n_sim <- 2
+n <- 1500
 
 ##################################################
 # RR, Trt-Abortion = 0.8
@@ -46,12 +48,11 @@ rr_preec <- 0.8
 save_name_gen <- "DGM - Abortion08Preeclampsia08.rds"
 
 # All RDS files are saved
-set.seed(1234)
-set.seed(5678)
-all_outcomes <- generate_dgm(n_sim, n, param_file, rr_abortion, rr_preec)
+set.seed(2094857309)
+#all_outcomes <- generate_dgm(n_sim, n, param_file, rr_abortion, rr_preec)
 
 # For multiple, optimize this somehow
-#all_outcomes <- map_dfr(1:n_sim, ~generate_dgm(.x, n, param_file, rr_abortion, rr_preec))
+all_outcomes <- map_dfr(1:n_sim, ~generate_dgm(.x, n, param_file, rr_abortion, rr_preec))
 
 # Save the RDS file -- Potentially important for bootstrapping SEs
 saveRDS(all_outcomes, save_name_gen)
@@ -77,8 +78,6 @@ saveRDS(all_outcomes, save_name_gen)
 # RR, Trt-Abortion = 0.8
 # RR, Trt-Preeclampsia = 0.8
 
-# Same DGM data for all of these
-data <- readRDS('DGM - Abortion08Preeclampsia08.rds')
 #################################################
 
 
@@ -88,26 +87,36 @@ data <- readRDS('DGM - Abortion08Preeclampsia08.rds')
 beta12 <- 0.01
 gamma0 <- 0.1
 gamma1 <- 0.001
-save_name_cohort <- "ab08preec08_beta001_gamma01_001.rds"
+#save_name_cohort <- "ab08preec08_beta001_gamma01_001.rds"
 
-set.seed(1234) # Same seed throughout
-set.seed(5678)
-generate_cohort(data, beta12, gamma0, gamma1, save_name_cohort)
+set.seed(2094857309) # Same seed throughout
+test <- generate_cohort(all_outcomes, beta12, gamma0, gamma1)#, save_name_cohort)
 
 
 
 
 
 #### Missing: Beta1 = 0.05, Gamma0 = 0.1, Gamma1 = 0.02
+# 
+# beta12 <- 0.05
+# gamma0 <- 0.1
+# gamma1 <- 0.02
+# save_name_cohort <- "ab08preec08_beta005_gamma01_002.rds"
+# 
+# set.seed(2094857309) # Same seed throughout
+# generate_cohort(data, beta12, gamma0, gamma1, save_name_cohort)
+# 
 
-beta12 <- 0.05
-gamma0 <- 0.1
-gamma1 <- 0.02
-save_name_cohort <- "ab08preec08_beta005_gamma01_002.rds"
 
-set.seed(1234) # Same seed throughout
-set.seed(5678)
-generate_cohort(data, beta12, gamma0, gamma1, save_name_cohort)
+
+
+##################################################
+# Run ANALYSES
+#################################################
+
+test2 <- run_analysis(test)
+
+
 
 
 
