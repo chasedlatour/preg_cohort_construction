@@ -24,19 +24,12 @@ First, we must read in the necessary data files.
 
 ```{r}
 
-## Trt-Abortion = 0.8, -Preec = 0.8
 
-#### Missing: Beta1 = 0.01, Gamma0 = 0.1, Gamma1 = 0.001
-test1 <- readRDS("ab08preec08_beta001_gamma01_001.rds") %>% 
+test1 <- do.call(rbind, readRDS("ab08preec08_beta001_gamma01_001.rds")) %>% 
   mutate(scenario = "test1")
 
-#### Missing: Beta1 = 0.05, Gamma0 = 0.1, Gamma1 = 0.02
-test2 <- readRDS("ab08preec08_beta005_gamma01_002.rds") %>% 
-  mutate(scenario = "test2")
 
-# Stack the data files
-
-describe <- rbind(test1, test2)
+describe <- test1
 
 
 ```
@@ -167,8 +160,10 @@ describe_cohort <- function(dataset){
     ) %>% 
     kbl() %>% 
     kable_classic() %>% 
-    add_header_above(c(" " = 1, "Non-Initiators" = 1, "Initiators" = 1, "Non-Initiators" = 1, "Initiators" = 1)) %>% 
-    add_header_above(c(" " = 1, "Test 1" = 2, "Test 2" = 2)) %>% 
+    add_header_above(c(" " = 1, "Non-Initiators" = 1, "Initiators" = 1)) %>% 
+    #add_header_above(c(" " = 1, "Non-Initiators" = 1, "Initiators" = 1, "Non-Initiators" = 1, "Initiators" = 1)) %>% 
+    add_header_above(c(" " = 1, "Test 1" = 2)) %>% 
+    #add_header_above(c(" " = 1, "Test 1" = 2, "Test 2" = 2)) %>% 
     pack_rows("Number (%) of Pregnancies by Severity", 1, 3) %>% 
     pack_rows("Number (%) of Pregnancies by First PNC", 4, 6) %>% 
     pack_rows("Number (%) of Pregnancy Outcomes", 7, 9) %>% 
@@ -222,8 +217,8 @@ describe %>%
                     "Non-Initiators", "Initiators")) %>% 
   kable_classic() %>% 
   add_header_above(c(" " = 1, "Continue Pregnancy" = 2, "Fetal Death" = 2, "Live Birth" = 2)) %>% 
-  pack_rows("Test 1", 1, 41) %>% 
-  pack_rows("Test 2", 42, 82)
+  pack_rows("Test 1", 1, 41) #%>% 
+  #pack_rows("Test 2", 42, 82)
 
 
 
@@ -302,12 +297,16 @@ table(subset(describe, pregout_pre_miss == "livebirth")$pregout_t_pre_miss+2)
 
 ```{r}
 
-describe %>% 
-  filter(preeclampsia_pre_miss == 1) %>% 
-  mutate(Treatment = ifelse(trt == 0, 
-                            "Non-Initiation", 
-                            "Initiation")) %>% 
+table(subset(describe, preeclampsia_pre_miss == 1)$pregout_t_pre_miss+2)
+
+
+describe %>%
+  filter(preeclampsia_pre_miss == 1) %>%
+  mutate(Treatment = ifelse(trt == 0,
+                            "Non-Initiation",
+                            "Initiation")) %>%
   ggplot(aes(x = (pregout_t_pre_miss+2), y = after_stat(density*width))) +
+  #ggplot(aes(x = (pregout_t_pre_miss+2))) +
     geom_histogram(alpha = 0.2, position = "identity", bins = 41) +
     #geom_freqpoly(bins = 41) +
     facet_grid(scenario ~ Treatment, labeller = labeller(scenario = label_both, Treatment = label_value), switch = "y") +
@@ -331,15 +330,39 @@ describe_cohort(describe)
 
 ## Low Severity Disease
 
+Describe characteristics of the overall cohort.
+
 ```{r}
 
 describe_cohort(subset(describe, severity == 0))
 
 ```
 
-## Medium Severity Disease
+Look at the timing of abortion according to the gestational age at cohort entry.
 
 ```{r}
+
+low <- subset(describe, severity == 0)
+
+low %>% 
+  filter(pregout_pre_miss == 'fetaldeath' & pregout_t_pre_miss < 18) %>% 
+  group_by((pnc_wk+2)) %>% 
+  summarize(percent_of_pregnancies = round(100*n()/nrow(low), 2),
+            percent_of_abortions = round(100*n()/nrow(subset(low, 
+                                                             pregout_pre_miss == 'fetaldeath' & 
+                                                               pregout_t_pre_miss < 18)), 2),
+            min = min(pregout_t_pre_miss) + 2,
+            p25 = quantile(pregout_t_pre_miss, 0.25) + 2,
+            median = quantile(pregout_t_pre_miss, 0.50) + 2,
+            p75 = quantile(pregout_t_pre_miss, 0.75) + 2,
+            max = max(pregout_t_pre_miss) + 2
+            )
+
+```
+
+## Medium Severity Disease
+
+```{r eval=FALSE}
 
 describe_cohort(subset(describe, severity == 1))
 
@@ -347,7 +370,7 @@ describe_cohort(subset(describe, severity == 1))
 
 ## High Severity Disease
 
-```{r}
+```{r eval=FALSE}
 
 describe_cohort(subset(describe, severity == 2))
 

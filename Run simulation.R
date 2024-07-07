@@ -31,8 +31,8 @@ source("create cohort functions.R")
 # Generate the data
 #####################################################
 
-n_sim <- 2
-n <- 1500
+n_sim <- 1
+n <- 50000
 
 ##################################################
 # RR, Trt-Abortion = 0.8
@@ -49,10 +49,10 @@ save_name_gen <- "DGM - Abortion08Preeclampsia08.rds"
 
 # All RDS files are saved
 set.seed(2094857309)
-#all_outcomes <- generate_dgm(n_sim, n, param_file, rr_abortion, rr_preec)
+all_outcomes <- generate_dgm(n_sim, n, param_file, rr_abortion, rr_preec)
 
 # For multiple, optimize this somehow
-all_outcomes <- map_dfr(1:n_sim, ~generate_dgm(.x, n, param_file, rr_abortion, rr_preec))
+#all_outcomes <- map_dfr(1:n_sim, ~generate_dgm(.x, n, param_file, rr_abortion, rr_preec))
 
 # Save the RDS file -- Potentially important for bootstrapping SEs
 saveRDS(all_outcomes, save_name_gen)
@@ -65,10 +65,6 @@ saveRDS(all_outcomes, save_name_gen)
 
 #####################################################
 # Create the analytic cohorts.
-
-# NEXT STEP: DETERMINE IF NEEDS TO BE MODIFIED TO 
-# RUN FOR EACH SIMULATION SEPARATELY.
-# MAYBE START SPLIT_DATA HERE.
 #####################################################
 
 
@@ -77,7 +73,6 @@ saveRDS(all_outcomes, save_name_gen)
 ##################################################
 # RR, Trt-Abortion = 0.8
 # RR, Trt-Preeclampsia = 0.8
-
 #################################################
 
 
@@ -87,11 +82,12 @@ saveRDS(all_outcomes, save_name_gen)
 beta12 <- 0.01
 gamma0 <- 0.1
 gamma1 <- 0.001
-#save_name_cohort <- "ab08preec08_beta001_gamma01_001.rds"
+save_name_cohort <- "ab08preec08_beta001_gamma01_001.rds"
 
 set.seed(2094857309) # Same seed throughout
 test <- generate_cohort(all_outcomes, beta12, gamma0, gamma1)#, save_name_cohort)
 
+saveRDS(test, "ab08preec08_beta001_gamma01_001.rds")
 
 
 
@@ -114,7 +110,7 @@ test <- generate_cohort(all_outcomes, beta12, gamma0, gamma1)#, save_name_cohort
 # Run ANALYSES
 #################################################
 
-test2 <- run_analysis(test)
+#test2 <- run_analysis(test)
 
 
 
