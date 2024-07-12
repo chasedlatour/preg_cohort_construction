@@ -372,7 +372,7 @@ low %>%
 
 ## Medium Severity Disease
 
-```{r eval=FALSE}
+```{r}
 
 describe_cohort(subset(describe, severity == 1))
 
@@ -380,7 +380,7 @@ describe_cohort(subset(describe, severity == 1))
 
 ## High Severity Disease
 
-```{r eval=FALSE}
+```{r}
 
 describe_cohort(subset(describe, severity == 2))
 
