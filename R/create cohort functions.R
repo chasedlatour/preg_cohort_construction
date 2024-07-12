@@ -427,17 +427,20 @@ revise_pnc <- function(pnc_encounters, wk){
   n <- length(pnc_encounters)
   
   # No prenatal encounters prior to indexing prenatal encounter
-  pre_week <- rep(0, wk-1)
+  pre_week <- rep(0, wk) # Changed wk-1 to wk because starts at 0
+  
   
   # Prenatal encounter on indexing prenatal encounter week
-  week <- 1
+  #week <- 1
   
   # Prenatal encounters after the indexing prenatal encounter
-  wk_plus <- pnc_encounters[(wk+1):n]
+  wk_plus <- pnc_encounters[(wk+1):n] 
   
   # Return the final list of prenatal encounters
   list(
-    c(pre_week,week, wk_plus)
+    c(pre_week,
+      #week, 
+      wk_plus)
     )
   
 }

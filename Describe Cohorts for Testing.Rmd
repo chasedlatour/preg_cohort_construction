@@ -39,7 +39,7 @@ Create kable with description of a specified dataset.
 
 describe_cohort <- function(dataset){
   
-  hold <- dataset %>% 
+  hold <- dataset %>% #  test2 %>%
     group_by(scenario, trt) %>% 
     summarize(
       
@@ -190,6 +190,51 @@ describe_cohort <- function(dataset){
 }
 
 
+```
+
+# Create table with description of prenatal care encounters
+
+```{r}
+
+  
+describe_pnc <- function(dataset){
+  
+  hold <- dataset %>% #  test2 %>% # 
+    mutate(
+      n_pnc_before_pre_miss_outcome =
+        sum(as.numeric(unlist(pnc_enc_rev)[1:pregout_t_pre_miss])==1),
+      median_time_between_pnc = median(diff(which(unlist(pnc_enc_rev)[1:(pregout_t_pre_miss-1)]==1)), na.rm = TRUE),
+      median_time_between_pnc = ifelse(is.na(median_time_between_pnc),
+                                       0,
+                                       median_time_between_pnc)
+    ) %>%
+    group_by(pnc_wk, pregout_t_pre_miss) %>% 
+    summarize(
+      
+      n_median = median(n_pnc_before_pre_miss_outcome),
+      n_q1 = quantile(n_pnc_before_pre_miss_outcome, probs = 0.25),
+      n_q3 = quantile(n_pnc_before_pre_miss_outcome, probs = 0.75),
+      
+      time_between_median = median(median_time_between_pnc),
+      time_between_q1 = quantile(median_time_between_pnc, probs = 0.25),
+      time_between_q3 = quantile(median_time_between_pnc, probs = 0.75),
+      
+      .groups = 'keep'
+    ) %>% 
+    mutate(
+      n = paste0(n_median," (", n_q1, ", ", n_q3, ")"),
+      time_between = paste0(time_between_median, " (", time_between_q1,
+                                   ", ", time_between_q3, ")")
+    ) %>% 
+    select(pnc_wk, pregout_t_pre_miss, n, time_between) %>% 
+    kbl() %>% 
+    kable_classic() %>% 
+    add_header_above(c("Indexing Prenatal Encounter" = 1, " " = 1, 
+                       "Median (IQR) Number of Prenatal Encounters" = 1,
+                       "Median (IQR) Time Between Prenatal Encounters" = 1))
+      
+  return(hold)  
+}
 
 
 ```
@@ -383,6 +428,14 @@ describe_cohort(subset(describe, severity == 1))
 ```{r}
 
 describe_cohort(subset(describe, severity == 2))
+
+```
+
+# Distribution of Prenatal Care Encounters
+
+```{r}
+
+describe_pnc(describe)
 
 ```
 
