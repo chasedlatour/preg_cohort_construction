@@ -18,10 +18,10 @@ library(survival)
 library(rlang)
 
 # Pull in the data generation functions - These functions create the raw data
-source("Data generation functions.R")
+source("R/Data generation functions.R")
 
 # Pull in the cohort creation functions - These functions actually create the analytic cohorts from the raw data
-source("create cohort functions.R")
+source("R/create cohort functions.R")
 
 
 
@@ -32,7 +32,7 @@ source("create cohort functions.R")
 #####################################################
 
 n_sim <- 1
-n <- 50000
+n <- 20000
 
 ##################################################
 # RR, Trt-Abortion = 0.8
@@ -45,7 +45,7 @@ n <- 50000
 param_file <- "Parameters_Abortion0_8_Preeclampsia0_8.xlsx"
 rr_abortion <- 0.8
 rr_preec <- 0.8
-save_name_gen <- "DGM - Abortion08Preeclampsia08.rds"
+save_name_gen <- "data/DGM - Abortion08Preeclampsia08.rds"
 
 # All RDS files are saved
 set.seed(2094857309)
@@ -55,7 +55,7 @@ all_outcomes <- generate_dgm(n_sim, n, param_file, rr_abortion, rr_preec)
 #all_outcomes <- map_dfr(1:n_sim, ~generate_dgm(.x, n, param_file, rr_abortion, rr_preec))
 
 # Save the RDS file -- Potentially important for bootstrapping SEs
-saveRDS(all_outcomes, save_name_gen)
+#saveRDS(all_outcomes, save_name_gen)
 
 
 ###### 
@@ -82,12 +82,12 @@ saveRDS(all_outcomes, save_name_gen)
 beta12 <- 0.01
 gamma0 <- 0.1
 gamma1 <- 0.001
-save_name_cohort <- "ab08preec08_beta001_gamma01_001.rds"
+save_name_cohort <- "data/ab08preec08_beta001_gamma01_001.rds"
 
 set.seed(2094857309) # Same seed throughout
-test <- generate_cohort(all_outcomes, beta12, gamma0, gamma1)#, save_name_cohort)
+test <- generate_cohort(all_outcomes, beta12, gamma0, gamma1)
 
-saveRDS(test, "ab08preec08_beta001_gamma01_001.rds")
+saveRDS(test, save_name_cohort)
 
 
 
