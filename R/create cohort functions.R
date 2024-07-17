@@ -21,7 +21,7 @@ generate_cohort <- function(data, beta12, gamma0, gamma1){ #, save_name_cohort
   
   # Set values that are going to hold for ALL DGMs and 
   # analytic samples
-  p_sev <- 1 - 0.8^(1/40) # Weekly prob (over 40 weeks) of being LTFU at lowest severity
+  p_sev <- 1 - 0.9^(1/40) # Weekly prob (over 40 weeks) of being LTFU at lowest severity
   b0_sev <- log(p_sev / (1-p_sev)) # beta 0 in the logistic regression for LTFU due to severity is NOT varied across scenarios
   
   ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
@@ -30,11 +30,16 @@ generate_cohort <- function(data, beta12, gamma0, gamma1){ #, save_name_cohort
   )
   
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
-  p_sev_beta = c(b0_sev, log(beta12 / (1-beta12)), log((2*beta12 / (1 - (2*beta12)))))
+  # p_sev_beta = c(b0_sev, log(beta12 / (1-beta12)), log((2*beta12 / (1 - (2*beta12)))))
+  # p_sev_beta = c(b0_sev, beta12, 2*beta12)
+  p_sev_beta = c(b0_sev, beta12)
   
   # Add the simulation parameters to the dataset
   hold <- data %>% 
-    mutate(diff_beta1_beta2 = beta12,
+    mutate(beta_0 = b0_sev,
+           beta_1 = beta12[1],
+           beta_2 = beta12[2],
+           #diff_beta1_beta2 = beta12,
            gamma_0 = gamma0,
            gamma_1 = gamma1)
   
