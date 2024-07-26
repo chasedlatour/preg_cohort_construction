@@ -47,18 +47,21 @@ saveRDS(all_outcomes, "data/DGM - Abortion08Preeclampsia08.rds")
 
 #####################################################
 # Create the cohort data
+# all_outcomes <- readRDS("data/DGM - Abortion08Preeclampsia08.rds")
 #####################################################
 
 #### Missing: Beta1 = 0.05, Gamma0 = 0.1, Gamma1 = 0.02
 # 
-beta12 <- c(0.7519006, 1.006749) # Severity less predictive
+marginal_p_miss_severity <- 0.1
+beta12 <- 0.7
+  #c(0.7519006, 1.006749) # Severity less predictive
 # beta12 <- c(1.222581, 1.742095) # Severity more predictive
-gamma0 <- 0.1
+marginal_p_miss_miscarriage <- 0.5
 gamma1 <- 0.01
 save_name_cohort <- "data/ab08preec08_beta001_gamma01_001.rds"
 
 set.seed(2094857309) # Same seed throughout
-test <- generate_cohort(all_outcomes, beta12, gamma0, gamma1)
+test <- generate_cohort(all_outcomes, marginal_p_miss_severity, beta12, marginal_p_miss_miscarriage, gamma1)
 
 saveRDS(test, save_name_cohort)
 

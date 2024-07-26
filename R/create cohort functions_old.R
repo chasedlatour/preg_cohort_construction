@@ -17,48 +17,28 @@
 # missingness parameters.
 #####################################################
 
-generate_cohort <- function(data, marginal_p_miss_severity, beta12, marginal_p_miss_miscarriage, gamma1){ #, save_name_cohort
+generate_cohort <- function(data, beta12, gamma0, gamma1){ #, save_name_cohort
   
-  # Use the expected data to determine the balancing intercept values
-  # Base this off of expected values among the untreated
-  
-  ## Calculate the betas for missingness due to baseline disease severity
-  ## Calculate the weekly probability
-  weekly_p_miss_sev <- 1- (1-marginal_p_miss_severity)^(1/40) # Weekly prob (over 40 weeks) of being LTFU
-  
-  # Get the expected value of severity in the missing cohort
-  ## Distribution of severity at baseline : 1/3, 1/3, 1/3
-  ## P(Trt|Severity) : 0.4, 0.5, 0.6
-  ## Expected distribution of severity among untreated: 4/15 = low, 5/15 = med, 6/15 = high
-  ## Manually calculated based upon the values above.
-  expected_sev <- (4/15*0) + (5/15*1) + (6/15*2)
-  
-  ## Balancing intercept for model
-  b0_sev <- -log((1/weekly_p_miss_sev)-1) - (beta12 * expected_sev)
-
-  ## Calculate the betas for the missingness due to miscarriage.
-  ## The expected GA of miscarriages was calculated based upon an average from a 5 million person
-  ## dataset - Needed the expected GA among those that would be included in the analysis (i.e., 
-  ## that make it to their assigned first PNC encounter.)
-  expected_ga_miscarriages <- 10
-  gamma0 <- -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
-  
+  # Set values that are going to hold for ALL DGMs and 
+  # analytic samples
+  p_sev <- 1 - 0.9^(1/40) # Weekly prob (over 40 weeks) of being LTFU at lowest severity
+  b0_sev <- log(p_sev / (1-p_sev)) # beta 0 in the logistic regression for LTFU due to severity is NOT varied across scenarios
   
   ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
-  ## This is the vector of beta values
-  p_miss_outcome <- c(gamma0, 
-                      gamma1)
+  p_miss_outcome <- c(log(gamma0/(1-gamma0)), 
+                      log(gamma1/(1-gamma1))
+  )
   
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
-  p_sev_beta = c(b0_sev, beta12, 2*beta12)
+  # p_sev_beta = c(b0_sev, log(beta12 / (1-beta12)), log((2*beta12 / (1 - (2*beta12)))))
+  # p_sev_beta = c(b0_sev, beta12, 2*beta12)
+  p_sev_beta = c(b0_sev, beta12)
   
   # Add the simulation parameters to the dataset
   hold <- data %>% 
     mutate(beta_0 = b0_sev,
-           beta_1 = beta12,
-           beta_2 = 2*beta12,
-           # beta_1 = beta12[1],
-           # beta_2 = beta12[2],
+           beta_1 = beta12[1],
+           beta_2 = beta12[2],
            #diff_beta1_beta2 = beta12,
            gamma_0 = gamma0,
            gamma_1 = gamma1)
@@ -110,6 +90,8 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12, marginal_p_m
 # - p_miss_outcome = betas for the missingness 
 #   logistic regression based upon preg outcome
 #####################################################
+
+### CHASE -- RUN SOME SUMMARIES OF EACH OF THESE DATASETS TO MAKE SURE THEY LOOK AS EXPECTED
 
 create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
   
@@ -238,7 +220,8 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
            pregout_t_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
                                        t_ltfu_mar_mnar,
                                        pregout_t_pre_miss))
- 
+  # NOTE: Analysis problem to deal with -- some censored on the day that they are randomized (i.e., they have their indexing encounter and then never come back). Will likely need to add a small constant to all times. Check with Jess.
+  
   return(data3)
   
 }
