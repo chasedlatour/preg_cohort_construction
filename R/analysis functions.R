@@ -488,47 +488,6 @@ aj_estimator <- function(data_subset, outcome_ind, time_var) {
 
 
 
-# aj_estimator <- function(data_subset, outcome_ind, time_var) {
-#   outcome_ind <- enquo(outcome_ind)
-#   time_var <- enquo(time_var)
-#   
-#   # Jitter ties
-#   data_jittered <- data_subset %>% 
-#     group_by(!!time_var) %>% 
-#     add_tally(name = "count") %>%  # Use a different name for the tally counts
-#     ungroup() %>% 
-#     mutate(
-#       # Jitter event times
-#       jitter = runif(nrow(data_subset), min = -.01, max = .01),
-#       time = ifelse(count > 1, !!sym(quo_name(time_var)) + jitter, !!sym(quo_name(time_var)))
-#     )
-#   
-#   # Run the AJ model
-#   aj <- survfit(Surv(time, factor(!!sym(quo_name(outcome_ind)))) ~ trt, data = data_jittered)
-#   
-#   mod <- summary(aj)
-#   
-#   summod <- data.frame(t = mod$time,
-#                        r = mod$pstate[, 2], 
-#                        se = mod$std.err[, 2],
-#                        trt = c(rep(0, length(mod[["strata"]][mod[["strata"]] == "trt=0"])), 
-#                                rep(1, length(mod[["strata"]][mod[["strata"]] == "trt=1"])))
-#   ) %>%
-#     filter(t < 43 + 0.5) %>%  # Deal with the jittering of outcomes
-#     group_by(trt) %>% 
-#     summarize(risk = last(r),
-#               .groups = 'drop') %>% 
-#     pivot_wider(names_from = trt,
-#                 values_from = risk,
-#                 names_glue = "{.value}{trt}") %>% 
-#     select(risk0, risk1)
-#   
-#   return(summod)
-# }
-
-
-
-
 ##############################################
 # FUNCTION: calculate_aj_risks()
 # PURPOSE: The purpose of this function is to 
