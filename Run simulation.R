@@ -24,12 +24,31 @@ source("R/Data generation functions.R")
 source("R/create cohort functions.R")
 
 
+#####################################################
+# Get the full grid of treatment effect combinations
+#####################################################
+
+treatment_effects <- expand.grid(
+  rr_abortion = c(0.5, 0.8), #, 1, 1.25, 2),
+  rr_preeclampsia = c(0.5) #, 0.8, 1)
+) %>% 
+  mutate(
+    param_file = paste0("Parameters_Abortion",
+                        gsub("\\.", "", as.character(rr_abortion)), 
+                        "_Preeclampsia", 
+                        gsub("\\.", "", as.character(rr_preeclampsia)), 
+                        ".xlsx"),
+    n_sim = 1,
+    n = 100 #50000
+  )
 
 
 
 #####################################################
 # Generate the data
 #####################################################
+
+## Scenario: RR_Abortion = 0.8, RR_Preeclampsia = 0.8
 n_sim <- 1
 n <- 50000
 rr_abortion <- 0.8
@@ -57,7 +76,7 @@ beta12 <- 0.7
   #c(0.7519006, 1.006749) # Severity less predictive
 # beta12 <- c(1.222581, 1.742095) # Severity more predictive
 marginal_p_miss_miscarriage <- 0.5
-gamma1 <- 0.01
+gamma1 <- -0.4
 save_name_cohort <- "data/ab08preec08_beta001_gamma01_001.rds"
 
 set.seed(2094857309) # Same seed throughout
