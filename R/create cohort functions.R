@@ -20,13 +20,6 @@
 generate_cohort <- function(data, marginal_p_miss_severity, beta12, 
                             marginal_p_miss_miscarriage, gamma1){ #, save_name_cohort
   
-  # Use the expected data to determine the balancing intercept values
-  # Base this off of expected values among the untreated
-  
-  ## Calculate the betas for missingness due to baseline disease severity
-  ## Calculate the weekly probability
-  # weekly_p_miss_sev <- 1- (1-marginal_p_miss_severity)^(1/40) # Weekly prob (over 40 weeks) of being LTFU
-  
   # Get the expected value of severity in the missing cohort
   ## Distribution of severity at baseline : 1/3, 1/3, 1/3
   ## P(Trt|Severity) : 0.4, 0.5, 0.6
@@ -36,56 +29,25 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
   
   ## Balancing intercept for model
   b0_sev <- -log((1/marginal_p_miss_severity)-1) - (beta12 * expected_sev)
-
-  ## Calculate the betas for the missingness due to miscarriage.
-  ## The expected GA of miscarriages was calculated based upon an average from a 5 million person
-  ## dataset - Needed the expected GA among those that would be included in the analysis (i.e., 
-  ## that make it to their assigned first PNC encounter.)
-  expected_ga_miscarriages <- 10
-  gamma0 <- -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
-  
-  
-  ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
-  ## This is the vector of beta values
-  p_miss_outcome <- c(gamma0, 
-                      gamma1)
   
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
   p_sev_beta = c(b0_sev, beta12, 2*beta12)
   
-  # Add the simulation parameters to the dataset
-  hold <- data %>% 
-    mutate(beta_0 = b0_sev,
-           beta_1 = beta12,
-           beta_2 = 2*beta12,
-           # beta_1 = beta12[1],
-           # beta_2 = beta12[2],
-           #diff_beta1_beta2 = beta12,
-           gamma_0 = gamma0,
-           gamma_1 = gamma1)
-  
   ## Split the data by sim_id to maintain balance within the datasets
-  split_data <- split(hold, hold$sim_id)
+  split_data <- split(data, data$sim_id)
   
   ## Select the observed cohort
-  hold2 <- mapply(
+  hold <- mapply(
     create_cohort,
     split_data, 
-    MoreArgs = list(p_sev_beta = p_sev_beta, p_miss_outcome = p_miss_outcome),
+    MoreArgs = list(p_sev_beta = p_sev_beta,
+                    marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+                    gamma1 = gamma1),
     SIMPLIFY = FALSE
-  )
+  ) %>% bind_rows()
   
-  return(hold2)
-  
-  # all_outcomes2 <- create_cohort(data, p_sev_beta, p_miss_outcome) %>% 
-  #   mutate(diff_beta1_beta2 = beta12,
-  #          gamma_0 = gamma0,
-  #          gamma_1 = gamma1)
-    
-  
-  # Save the RDS file
-  #saveRDS(all_outcomes2, save_name_cohort)
-  
+  return(hold)
+
 }
 
 
@@ -108,11 +70,12 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
 # - dataset = raw generated DGM data
 # - p_sev_beta = betas for the missingness logistic
 #   regression based upon severity
-# - p_miss_outcome = betas for the missingness 
+# - gamma1 = beta for the missingness 
 #   logistic regression based upon preg outcome
 #####################################################
 
-create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
+create_cohort <- function(dataset, p_sev_beta, 
+                          marginal_p_miss_miscarriage, gamma1){
   
   # Get the probabilities associated with the betas for each
   # severity level - calculated via logistic regression
@@ -171,7 +134,27 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
       pregout_t_pre_miss = ifelse(trt == 0,
                                   final_preg0_t,
                                   final_preg1_t)
-    ) %>% 
+    ) 
+  
+  ## Calculate the betas for the missingness due to miscarriage.
+  ## Because this is a single simulation and not a full Monte Carlo simulation, this average 
+  ## is based upon the observed data. In a multi-repetition simulation, we would calculate
+  ## this in a large cohort and use that value.
+  ## Because the seed is maintained and this is only calculated among the non-initiators, this 
+  ## should be the same for all
+  expected_ga_miscarriages <- as.double(subset(data2, trt == 0 & pregout_t_pre_miss < 18) %>% 
+                                          ungroup() %>% 
+                                          summarize(avg = mean(pregout_t_pre_miss)))
+  gamma0 <- -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
+  
+  
+  ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
+  ## This is the vector of beta values
+  p_miss_outcome <- c(gamma0, 
+                      gamma1)
+  
+  # Finally, incorporate/create the missing outcomes
+  data2b <- data2 %>% 
     # Now determine if missing outcome based upon outcome and gw of outcome
     mutate(
       
@@ -209,7 +192,7 @@ create_cohort <- function(dataset, p_sev_beta, p_miss_outcome){
     )
   
   # Create a MAR and MNAR scenario
-  data3 <- data2 %>% 
+  data3 <- data2b %>% 
     mutate(
       
       ## Create an indicator variable for if the person was LTFU and how

@@ -65,7 +65,7 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       ".xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 100
+treatment_effects$n = 5000
 
 
 # Create a dataset with the missing data parameters
@@ -98,7 +98,7 @@ list(
         )
       ),
       # Create the cohorts
-      tarchetypes::tar_map(
+      mapped2 <- tarchetypes::tar_map(
         unlist = FALSE,
         values = missing_params,
         targets::tar_target(
@@ -110,24 +110,65 @@ list(
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
             gamma1 = gamma1
           )
+          ),
+        # Describe the data
+        targets::tar_target(
+          described_data,
+          describe_cohort(
+            cohort_data,
+            rr_abortion = rr_abortion,
+            rr_preec = rr_preec,
+            marginal_p_miss_severity = marginal_p_miss_severity,
+            beta12 = beta12,
+            marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+            gamma1 = gamma1
+          )
+        ),
+        # Analyze the data
+        targets::tar_target(
+          analyzed_data,
+          run_analysis(
+            cohort_data,
+            rr_abortion = rr_abortion,
+            rr_preec = rr_preec,
+            marginal_p_miss_severity = marginal_p_miss_severity,
+            beta12 = beta12,
+            marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+            gamma1 = gamma1
+          )
         )
       ),
-      # Analyze the data
-      targets::tar_target(
-        analyzed_data,
-        run_analysis(cohort_data)
+      # Combine all of the descriptive statistics together
+      tarchetypes::tar_combine(
+        scenario_descriptives,
+        mapped2[["described_data"]],
+        command = dplyr::bind_rows(!!!.x)
+      ),
+      # Combine all of the analyses together
+      tarchetypes::tar_combine(
+        scenario_analyses,
+        mapped2[["analyzed_data"]],
+        command = dplyr::bind_rows(!!!.x)
       )
     )
-  )
+  ),
+  
+  # Combine all of the descriptive results into one dataset
+  tar_combine(
+    all_descriptives,
+    mapped1[["scenario_descriptives"]],
+    command = dplyr::bind_rows(!!!.x)
+  ),
+  
+  # Combine all of the analysis results into one dataset 
+  tar_combine(
+    all_analyses,
+    mapped1[["scenario_analyses"]],
+    command = dplyr::bind_rows(!!!.x)
+  ),
+  
+  # Output a RMD file with all of the output.
+  tar_render(report, "Describe Cohorts.Rmd")
   
   
-  # tar_target(
-  #   name = data,
-  #   command = tibble(x = rnorm(100), y = rnorm(100))
-  #   # format = "qs" # Efficient storage for general data objects.
-  # ),
-  # tar_target(
-  #   name = model,
-  #   command = coefficients(lm(y ~ x, data = data))
-  # )
 )

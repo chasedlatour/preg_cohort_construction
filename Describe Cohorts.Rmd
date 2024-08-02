@@ -1,0 +1,54 @@
+---
+title: "Describe Cohorts"
+author: "Chase Latour"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(targets)
+library(tidyverse)
+library(kableExtra)
+```
+
+# Objetives
+
+The goal of this program is to describe the pregnancy cohorts created for each analytic dataset.
+
+# Data
+
+First, we must read in the necessary data files. 
+
+```{r}
+
+describe <- tar_read(all_descriptives)
+
+```
+
+# Describe the Cohort
+
+Create kable with description of a specified dataset. Do this for each RR combination.
+
+## $RR_{Preeclampsia} = 0.8, RR_{Abortion} = 0.8$
+
+```{r}
+
+# num_packs <- nrow(describe)/2
+
+describe %>% 
+  filter(rr_abortion == 0.8 & rr_preec == 0.8) %>% 
+  select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+         trt, n_low:missing_mnar_t) %>% 
+  kbl() %>%
+  collapse_rows(col_names = c(marginal_p_miss_severity, marginal_p_miss_miscarriage),
+                valign = "top") %>% 
+  kable_classic()
+      
+
+
+
+```

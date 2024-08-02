@@ -12,11 +12,20 @@
 
 
 
-run_analysis <- function(data){
+run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
+                         beta12, marginal_p_miss_miscarriage, gamma1){
   
-  hold <- lapply(data, prep_data_for_analysis)
+  hold <- prep_data_for_analysis(data)
   
-  hold2 <- conduct_analysis(hold)
+  hold2 <- conduct_analysis(hold) %>% 
+    mutate(
+      rr_abortion = rr_abortion,
+      rr_preec = rr_preec,
+      marginal_p_miss_severity = marginal_p_miss_severity,
+      beta12 = beta12,
+      marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+      gamma1 = gamma1
+    )
   
   return(hold2)
   
@@ -71,12 +80,13 @@ prep_data_for_analysis <- function(data){
       
       ## Time to event 
       final_pregout_mar_tte = ifelse(pregout_mar == 'unknown',
-                                     t_ltfu_mar,
-                                     pregout_t_mar),
+                                     # Subtract the pnc_wk to make this time to event
+                                     t_ltfu_mar - pnc_wk,
+                                     pregout_t_mar - pnc_wk),
       
-      ## Add small constant to follow-up time for immediate censors - CHECK THIS.
+      ## Add small constant to follow-up time for immediate censors
       final_pregout_mar_tte = ifelse(final_pregout_mar_tte == 0,
-                                     0.1,
+                                     0.0001,
                                      final_pregout_mar_tte),
       
       # MAR+MNAR
@@ -88,12 +98,12 @@ prep_data_for_analysis <- function(data){
       
       ## Time to event 
       final_pregout_marmnar_tte = ifelse(pregout_mar == 'unknown',
-                                         t_ltfu_mar_mnar + 1,
-                                         pregout_t_mar_mnar + 1),
+                                         t_ltfu_mar_mnar - pnc_wk,
+                                         pregout_t_mar_mnar - pnc_wk),
       
       ## Add small constant to follow-up time for immediate censors - CHECK THIS.
       final_pregout_marmnar_tte = ifelse(final_pregout_marmnar_tte == 0,
-                                         0.1,
+                                         0.0001,
                                          final_pregout_marmnar_tte),
       
       # Sensitivity analysis
@@ -133,115 +143,85 @@ prep_data_for_analysis <- function(data){
 conduct_analysis <- function(data){
   
   # Get the pnc distribution for each simulation
-  pnc_dist <- lapply(data, get_pnc_dist)
+  pnc_dist <- get_pnc_dist(data)
   
   # Get the severity distribution for each simulation
-  sev_dist <- lapply(data, get_severity_dist)
+  sev_dist <- get_severity_dist(data)
   
   # Get the risks from the potential outcomes
-  potential_risks <- mapply(calculate_pot_risks, data, pnc_dist, SIMPLIFY = FALSE)
+  potential_risks <- calculate_pot_risks(data, pnc_dist)
   
   # Get the risks among observed deliveries
   
     ## MAR:
-    observed_deliveries_mar <- mapply(function(data, pnc_dist, sev_dist) {
-      #data_subset <- subset(data, obs_delivery_mar == 1)
-      data %>% 
-        filter(obs_delivery_mar == 1) %>% 
-        calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
-    }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+    observed_deliveries_mar <- data %>% 
+      filter(obs_delivery_mar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
     
     ## MNAR:
-    observed_deliveries_mar_mnar <- mapply(function(data, pnc_dist, sev_dist) {
-      #data_subset <- subset(hold2, obs_delivery_mar_mnar == 1)
-      data %>% 
-        filter(obs_delivery_mar == 1) %>% 
-        calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
-    }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+    observed_deliveries_mar_mnar <- data %>% 
+      filter(obs_delivery_mar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
   
   # Get the risks among observed pregnancy outcomes
     
     ## MAR
-    observed_outcomes_mar <- mapply(function(data, pnc_dist, sev_dist) {
-      #data_subset <- subset(data, obs_outcome_mar == 1)
-      data %>% 
-        filter(obs_delivery_mar == 1) %>% 
-        calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
-    }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+    observed_outcomes_mar <- data %>% 
+      filter(obs_delivery_mar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
     
     ## MNAR
-    observed_outcomes_mar_mnar <- mapply(function(data, pnc_dist, sev_dist) {
-      #data_subset <- subset(hold2, obs_outcome_mar_mnar == 1)
-      data %>% 
-        filter(obs_delivery_mar_mnar == 1) %>% 
-        calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
-    }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+    observed_outcomes_mar_mnar <- data %>% 
+      filter(obs_delivery_mar_mnar == 1) %>% 
+      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
   
   # Time-to-event analyses
     
     ## MAR
-    # tte_mar <- mapply(calculate_aj_risks, data, pnc_dist, sev_dist, 
-    #                   MoreArgs = list(outcome_ind = final_pregout_mar, time_var = final_pregout_mar_tte), 
-    #                   SIMPLIFY = FALSE) 
-    tte_mar <- mapply(function(data_subset, pnc_dist, sev_dist) {
-      calculate_aj_risks(data_subset, pnc_dist, sev_dist, final_pregout_mar, final_pregout_mar_tte)
-    }, 
-    data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+    tte_mar <- calculate_aj_risks(data, pnc_dist, sev_dist, final_pregout_mar, final_pregout_mar_tte)
     
     ## MNAR
-    # tte_mar_mnar <- mapply(calculate_aj_risks, data, pnc_dist, sev_dist, 
-    #                        MoreArgs = list(time_var = "final_pregout_marmnar_tte"), 
-    #                        SIMPLIFY = FALSE)
-    tte_mar_mnar <- mapply(function(data_subset, pnc_dist, sev_dist) {
-      calculate_aj_risks(data_subset, pnc_dist, sev_dist, final_pregout_mar_mnar, final_pregout_marmnar_tte)
-    }, 
-    data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+    tte_mar_mnar <- calculate_aj_risks(data, pnc_dist, sev_dist, final_pregout_mar_mnar,
+                                       final_pregout_marmnar_tte)
     
   # Sensitivity analyses
     
     ## Assume that all missing outcomes have an outcome
     
       ### MAR:
-      sens_anal_mar_all_outc <- mapply(function(data, pnc_dist, sev_dist) {
-        data %>% 
-          calculate_risks(pnc_dist, sev_dist, preeclampsia_mar_immediate_outc)
-      }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+      sens_anal_mar_all_outc <- calculate_risks(data, pnc_dist, sev_dist,
+                                                preeclampsia_mar_immediate_outc)
       
       ### MNAR:
-      sens_anal_mar_mnar_all_outc <- mapply(function(data, pnc_dist, sev_dist) {
-        data %>% 
-          calculate_risks(pnc_dist, sev_dist, preeclampsia_marmnar_immediate_outc)
-      }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+      sens_anal_mar_mnar_all_outc <- calculate_risks(data, pnc_dist, sev_dist,
+                                                     preeclampsia_marmnar_immediate_outc)
       
     ## Assume that all missing outcomes do not have an outcome
       
       ## MAR:
-      sens_anal_mar_no_outc <- mapply(function(data, pnc_dist, sev_dist) {
-        data %>% 
-          calculate_risks(pnc_dist, sev_dist, preeclampsia_mar_no_outc)
-      }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+      sens_anal_mar_no_outc <- calculate_risks(data, pnc_dist, sev_dist, 
+                                               preeclampsia_mar_no_outc)
       
       ## MNAR:
-      sens_anal_mar_mnar_no_outc <- mapply(function(data, pnc_dist, sev_dist) {
-        data %>% 
-          calculate_risks(pnc_dist, sev_dist, preeclampsia_marmnar_no_outc)
-      }, data, pnc_dist, sev_dist, SIMPLIFY = FALSE)
+      sens_anal_mar_mnar_no_outc <- calculate_risks(data, pnc_dist, sev_dist,
+                                                    preeclampsia_marmnar_no_outc)
+
   
   # return(data)
   return(tibble(
-    pnc_dist = pnc_dist,
-    sev_dist = sev_dist,
-    potential_risks = potential_risks,
-    observed_deliveries_mar = observed_deliveries_mar,
-    observed_deliveries_mar_mnar = observed_deliveries_mar_mnar,
-    observed_outcomes_mar = observed_outcomes_mar,
-    observed_outcomes_mar_mnar = observed_outcomes_mar_mnar,
-    tte_mar = tte_mar,
-    tte_mar_mnar = tte_mar_mnar,
-    sens_anal_mar_all_outc = sens_anal_mar_all_outc,
-    sens_anal_mar_mnar_all_outc = sens_anal_mar_mnar_all_outc,
-    sens_anal_mar_no_outc = sens_anal_mar_no_outc,
-    sens_anal_mar_mnar_no_outc = sens_anal_mar_mnar_no_outc
+    pnc_dist = list(pnc_dist),
+    sev_dist = list(sev_dist),
+    potential_risks = list(potential_risks),
+    observed_deliveries_mar = list(observed_deliveries_mar),
+    observed_deliveries_mar_mnar = list(observed_deliveries_mar_mnar),
+    observed_outcomes_mar = list(observed_outcomes_mar),
+    observed_outcomes_mar_mnar = list(observed_outcomes_mar_mnar),
+    tte_mar = list(tte_mar),
+    tte_mar_mnar = list(tte_mar_mnar),
+    sens_anal_mar_all_outc = list(sens_anal_mar_all_outc),
+    sens_anal_mar_mnar_all_outc = list(sens_anal_mar_mnar_all_outc),
+    sens_anal_mar_no_outc = list(sens_anal_mar_no_outc),
+    sens_anal_mar_mnar_no_outc = list(sens_anal_mar_mnar_no_outc)
   ))
 
 }
@@ -428,11 +408,13 @@ aj_estimator <- function(data_subset, outcome_ind, time_var) {
   # Run the AJ model
   aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
   
+  #aj <- survfit(Surv(final_pregout_mar_tte, final_pregout_mar) ~ trt, data = data)
+  
   mod <- summary(aj)
   
   summod <- data.frame(t = mod$time,
                        r = mod$pstate[, 2], 
-                       se = mod$std.err[, 2],
+                       #se = mod$std.err[, 2],
                        trt = c(rep(0, length(mod[["strata"]][mod[["strata"]] == "trt=0"])), 
                                rep(1, length(mod[["strata"]][mod[["strata"]] == "trt=1"])))
   ) %>%
@@ -469,6 +451,8 @@ aj_estimator <- function(data_subset, outcome_ind, time_var) {
 ## Revised
 
 calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_var) {
+  
+  # browser()
   outcome_ind <- enquo(outcome_ind)
   time_var <- enquo(time_var)
   
