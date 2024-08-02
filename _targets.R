@@ -54,7 +54,7 @@ tar_source()
 
 
 
-# Create the simulation parameters
+# Create the data generation parameters
 treatment_effects <- expand.grid(
   rr_abortion = c(0.8), #c(0.5, 0.8, 1, 1.25, 2),
   rr_preec = c(0.8) #c(0.5, 0.8, 1)
@@ -68,6 +68,13 @@ treatment_effects$n_sim = 1
 treatment_effects$n = 100
 
 
+# Create a dataset with the missing data parameters
+missing_params <- data.frame(
+  marginal_p_miss_severity = c(0.0125, 0.025, 0.0375, 0.05, 0.1, 0.15),
+  beta12 = 0.7,
+  marginal_p_miss_miscarriage = c(0.0375, 0.025, 0.0125, 0.15, 0.1, 0.05),
+  gamma1 = -0.4
+)
 
 
 
@@ -89,6 +96,26 @@ list(
           rr_abortion = rr_abortion,
           rr_preec = rr_preec
         )
+      ),
+      # Create the cohorts
+      tarchetypes::tar_map(
+        unlist = FALSE,
+        values = missing_params,
+        targets::tar_target(
+          cohort_data,
+          generate_cohort(
+            generated_data,
+            marginal_p_miss_severity = marginal_p_miss_severity,
+            beta12 = beta12,
+            marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+            gamma1 = gamma1
+          )
+        )
+      ),
+      # Analyze the data
+      targets::tar_target(
+        analyzed_data,
+        run_analysis(cohort_data)
       )
     )
   )

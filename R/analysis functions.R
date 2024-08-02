@@ -10,31 +10,6 @@
 # simulations easily.
 #####################################################
 
-# library(tidyverse)
-# library(survival)
-# library(rlang)
-# 
-# ## Upload the dataset for testing
-# #### Missing: Beta1 = 0.01, Gamma0 = 0.1, Gamma1 = 0.001
-# data <- readRDS("ab08preec08_beta001_gamma01_001.rds") %>% 
-#   mutate(scenario = "test1")
-# 
-
-
-
-# Calculate the risks among cohorts with no right-censoring.
-
-# pot_risks <- calculate_pot_risks(data1, pnc_dist)
-# 
-# risks_obsdel_mar <- calculate_risks(subset(data1, obs_delivery_mar == 1), pnc_dist, sev_dist)
-# risks_obsdel_mar_mnar <- calculate_risks(subset(data1, obs_delivery_mar_mnar == 1), pnc_dist, sev_dist)
-# 
-# risks_obsout_mar <- calculate_risks(subset(data1, obs_outcome_mar == 1), pnc_dist, sev_dist)
-# risks_obsout_mar_mnar <- calculate_risks(subset(data1, obs_outcome_mar_mnar == 1), pnc_dist, sev_dist)
-
-# # Time-to-event analyses
-# tte_mar <- calculate_aj_risks(dataset, pnc_dist, sev_dist, "final_pregout_mar_tte")
-# tte_mnar <- calculate_aj_risks(dataset, pnc_dist, sev_dist, "final_pregout_marmnar_tte")
 
 
 run_analysis <- function(data){
@@ -446,17 +421,6 @@ aj_estimator <- function(data_subset, outcome_ind, time_var) {
   outcome_ind <- enquo(outcome_ind)
   time_var <- enquo(time_var)
   
-  # Jitter ties
-  # data_subset <- data_subset %>% 
-  #   group_by(!!time_var) %>% 
-  #   add_tally(name = "count") %>% 
-  #   ungroup() %>% 
-  #   mutate(
-  #     # Jitter event times
-  #     jitter = runif(n(), min = -.01, max = .01),
-  #     time = ifelse(count > 1, !!time_var + jitter, !!time_var)
-  #   )
-  
   # Convert outcome to factor
   data_subset <- data_subset %>% 
     mutate(outcome = as.factor(!!outcome_ind))
@@ -567,134 +531,6 @@ calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_va
   
   return(risks)
 }
-
-
-
-
-# 
-# # Define the calculate_aj_risks function
-# calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_var) {
-#   outcome_ind <- enquo(outcome_ind)
-#   time_var <- enquo(time_var)
-#   
-#   # Jitter ties
-#   mar <- dataset %>% 
-#     group_by(!!time_var) %>% 
-#     add_tally(name = "count") %>% 
-#     ungroup() %>% 
-#     mutate(
-#       # Jitter event times
-#       jitter = runif(nrow(dataset), min = -.01, max = .01), 
-#       time = ifelse(count > 1, !!sym(quo_name(time_var)) + jitter, !!sym(quo_name(time_var)))
-#     )
-#   
-#   # Split the dataset by severity and pnc_wk
-#   split_data <- split(mar, list(mar$severity, mar$pnc_wk))
-#   
-#   # Apply the aj_mar function to each subset
-#   results_list <- lapply(split_data, function(subset) aj_estimator(subset, !!sym(quo_name(outcome_ind)), 
-#                                                                    !!sym(quo_name(time_var))))
-#   
-#   # Combine the results into a single data frame
-#   results <- bind_rows(results_list, .id = "group")
-#   
-#   # Extract severity and pnc_wk from the group column
-#   results <- results %>%
-#     separate(group, into = c("severity", "pnc_wk"), sep = "\\.")
-#   
-#   # Convert severity and pnc_wk to their original data types if necessary
-#   results <- results %>%
-#     mutate(severity = as.numeric(severity),
-#            pnc_wk = as.numeric(pnc_wk))
-#   
-#   # Left merge the severity distribution onto the risks
-#   results_sev_merge <- left_join(results, sev_dist, by = c("severity" = "severity")) %>% 
-#     rowwise() %>% 
-#     mutate(risk0_std = risk0 * prop,
-#            risk1_std = risk1 * prop) %>% 
-#     group_by(pnc_wk) %>% 
-#     summarize(risk0 = sum(risk0_std),
-#               risk1 = sum(risk1_std))
-#   
-#   # Calculate the overall risks
-#   risk0 <- sum(results_sev_merge$risk0 * pnc_dist)
-#   risk1 <- sum(results_sev_merge$risk1 * pnc_dist)
-#   overall_risks <- tibble(
-#     pnc_wk = 'overall',
-#     risk0 = risk0,
-#     risk1 = risk1
-#   )
-#   
-#   # Final risks dataset
-#   risks <- rbind(results_sev_merge, overall_risks) %>% 
-#     rowwise() %>% 
-#     mutate(rd = risk1 - risk0,
-#            rr = risk1 / risk0)
-#   
-#   return(risks)
-# }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#OLD CODE
-
-
-# calculate_risks <- function(dataset, pnc_dist, sev_dist){
-#   
-#   # Calculate the risks using the potential outcomes
-#   strat_risks <- dataset %>% 
-#     group_by(trt, pnc_wk, severity)%>% 
-#     summarize(
-#       risk = sum(preeclampsia_pre_miss) / n(),
-#       .groups = 'drop'
-#     )
-#   
-#   # Merge the severity distribution among everyone at baseline on
-#   # and multiply through in order to calculate the standardized risks within 
-#   # each trt and pnc_wk strata.
-#   merge_sev_prop <- left_join(strat_risks, sev_dist, by = c("severity" = "severity")) %>% 
-#     rowwise() %>% 
-#     mutate(std_risk = risk*prop) %>% 
-#     group_by(trt, pnc_wk) %>% 
-#     summarize(risk = sum(std_risk),
-#               .groups = 'drop')
-#   
-#   strata_risks_wide <- merge_sev_prop %>% 
-#     pivot_wider(names_from = trt, values_from = risk, names_prefix = "risk")
-#   
-#   # Calculate the risks standardized to the PNC dist at baseline
-#   risk0 <- sum(strata_risks_wide$risk0 * pnc_dist)
-#   risk1 <- sum(strata_risks_wide$risk1 * pnc_dist)
-#   
-#   risks_overall <- tibble(
-#     pnc_wk = 'all',
-#     risk0 = risk0,
-#     risk1 = risk1
-#   )
-#   
-#   risks <- rbind(strata_risks_wide, risks_overall) %>% 
-#     rowwise() %>% 
-#     mutate(rd = risk1 - risk0,
-#            rr = risk1 / risk0) %>% 
-#     ungroup()
-#   
-#   return(risks)
-#   
-# }
-
 
 
 
