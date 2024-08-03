@@ -8,6 +8,11 @@ library(targets)
 library(tarchetypes) # Load other packages as needed.
 
 
+## For Installing packages on N2 server:
+# install.packages("igraph", repos = c("https://igraph.r-universe.dev", "https://cloud.r-project.org"))
+# install.packages("https://cran.r-project.org/src/contrib/Archive/RcppArmadillo/RcppArmadillo_0.9.900.3.0.tar.gz", repos=NULL, type="source")
+# install.packages("https://cran.r-project.org/src/contrib/etm_1.1.1.tar.gz", repos = NULL, type="source")
+
 
 # Set target options:
 tar_option_set(
