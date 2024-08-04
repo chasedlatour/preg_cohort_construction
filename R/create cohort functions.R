@@ -7,8 +7,9 @@
 # for identifying the study cohorts.
 #####################################################
 
-
-
+# Testing:
+# data <- tar_read(generated_data_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_20000)
+# Issue with createion of: cohort_data_0_0.7_1_.0.2_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_20000
 
 #####################################################
 # FUNCTION: generate_cohort()

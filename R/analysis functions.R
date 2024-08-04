@@ -8,9 +8,14 @@
 # is to ensure that these functions only need to be
 # editing one time and will apply throughout all
 # simulations easily.
+#
+# Modifications:
+# - Removed the MAR only analyses. Instead, 
+#   incorporating those into the percentages.
 #####################################################
 
-
+# Test
+# tar_data <- tar_read(cohort_data_0.0565_0.7_0_.0.2_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_20000)
 
 run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
                          beta12, marginal_p_miss_miscarriage, gamma1){
@@ -48,17 +53,17 @@ prep_data_for_analysis <- function(data){
     mutate(
       
       # Make indicator variables for observed delivery
-      obs_delivery_mar = ifelse(ltfu_mar == 'not' & pregout_t_mar >= 20,
-                                1,
-                                0),
+      # obs_delivery_mar = ifelse(ltfu_mar == 'not' & pregout_t_mar >= 20,
+      #                           1,
+      #                           0),
       obs_delivery_mar_mnar = ifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 20,
                                      1,
                                      0),
       
       # Make indicator for observed pregnancy outcome
-      obs_outcome_mar = ifelse(ltfu_mar == 'not',
-                               1,
-                               0),
+      # obs_outcome_mar = ifelse(ltfu_mar == 'not',
+      #                          1,
+      #                          0),
       obs_outcome_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
                                     1,
                                     0),
@@ -71,25 +76,6 @@ prep_data_for_analysis <- function(data){
       ## 3 = live birth wo preeclampsia
       # Calculate times to event
       
-      # MAR 
-      ## Outcome indicator
-      final_pregout_mar = case_when(pregout_mar == 'unknown' ~ 0,
-                                    preeclampsia_mar == 1 ~ 1,
-                                    pregout_mar == 'fetaldeath' ~ 2,
-                                    pregout_mar == 'livebirth' ~ 3),
-      
-      ## Time to event 
-      final_pregout_mar_tte = ifelse(pregout_mar == 'unknown',
-                                     # Subtract the pnc_wk to make this time to event
-                                     t_ltfu_mar - pnc_wk,
-                                     pregout_t_mar - pnc_wk),
-      
-      ## Add small constant to follow-up time for immediate censors
-      final_pregout_mar_tte = ifelse(final_pregout_mar_tte == 0,
-                                     0.0001,
-                                     final_pregout_mar_tte),
-      
-      # MAR+MNAR
       ## Outcome indicator
       final_pregout_mar_mnar = case_when(pregout_mar_mnar == 'unknown' ~ 0,
                                          preeclampsia_mar == 1 ~ 1,
@@ -101,7 +87,7 @@ prep_data_for_analysis <- function(data){
                                          t_ltfu_mar_mnar - pnc_wk,
                                          pregout_t_mar_mnar - pnc_wk),
       
-      ## Add small constant to follow-up time for immediate censors - CHECK THIS.
+      ## Add small constant to follow-up time for immediate censors
       final_pregout_marmnar_tte = ifelse(final_pregout_marmnar_tte == 0,
                                          0.0001,
                                          final_pregout_marmnar_tte),
@@ -109,17 +95,17 @@ prep_data_for_analysis <- function(data){
       # Sensitivity analysis
       
       ## Outcome immediately upon censoring
-      preeclampsia_mar_immediate_outc = ifelse(pregout_mar == 'unknown',
-                                               1,
-                                               preeclampsia_mar),
+      # preeclampsia_mar_immediate_outc = ifelse(pregout_mar == 'unknown',
+      #                                          1,
+      #                                          preeclampsia_mar),
       preeclampsia_marmnar_immediate_outc = ifelse(pregout_mar == 'unknown',
                                                    1,
                                                    preeclampsia_mar_mnar),
       
       ## No outcome and go the full follow-up without outcome. 
-      preeclampsia_mar_no_outc = ifelse(pregout_mar == 'unknown',
-                                        0,
-                                        preeclampsia_mar),
+      # preeclampsia_mar_no_outc = ifelse(pregout_mar == 'unknown',
+      #                                   0,
+      #                                   preeclampsia_mar),
       preeclampsia_marmnar_no_outc = ifelse(pregout_mar_mnar == 'unknown',
                                            0,
                                            preeclampsia_mar_mnar)
@@ -127,10 +113,6 @@ prep_data_for_analysis <- function(data){
     )
   
   return(hold)
-  
-  # hold2 <- split(hold,hold$sim_id)
-  # 
-  # return(hold2)
   
 }
 
@@ -149,38 +131,22 @@ conduct_analysis <- function(data){
   sev_dist <- get_severity_dist(data)
   
   # Get the risks from the potential outcomes
-  potential_risks <- calculate_pot_risks(data, pnc_dist)
+  potential_risks <- calculate_pot_risks(data)
   
   # Get the risks among observed deliveries
-  
-    ## MAR:
-    observed_deliveries_mar <- data %>% 
-      filter(obs_delivery_mar == 1) %>% 
-      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
-    
-    ## MNAR:
+
     observed_deliveries_mar_mnar <- data %>% 
-      filter(obs_delivery_mar == 1) %>% 
-      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
+      filter(obs_delivery_mar_mnar == 1) %>% 
+      calculate_risks(sev_dist, preeclampsia_pre_miss)
   
   # Get the risks among observed pregnancy outcomes
     
-    ## MAR
-    observed_outcomes_mar <- data %>% 
-      filter(obs_delivery_mar == 1) %>% 
-      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
-    
-    ## MNAR
     observed_outcomes_mar_mnar <- data %>% 
       filter(obs_delivery_mar_mnar == 1) %>% 
-      calculate_risks(pnc_dist, sev_dist, preeclampsia_pre_miss)
+      calculate_risks(sev_dist, preeclampsia_pre_miss)
   
   # Time-to-event analyses
     
-    ## MAR
-    tte_mar <- calculate_aj_risks(data, pnc_dist, sev_dist, final_pregout_mar, final_pregout_mar_tte)
-    
-    ## MNAR
     tte_mar_mnar <- calculate_aj_risks(data, pnc_dist, sev_dist, final_pregout_mar_mnar,
                                        final_pregout_marmnar_tte)
     
@@ -188,22 +154,12 @@ conduct_analysis <- function(data){
     
     ## Assume that all missing outcomes have an outcome
     
-      ### MAR:
-      sens_anal_mar_all_outc <- calculate_risks(data, pnc_dist, sev_dist,
-                                                preeclampsia_mar_immediate_outc)
-      
-      ### MNAR:
-      sens_anal_mar_mnar_all_outc <- calculate_risks(data, pnc_dist, sev_dist,
+      sens_anal_mar_mnar_all_outc <- calculate_risks(data, sev_dist,
                                                      preeclampsia_marmnar_immediate_outc)
       
     ## Assume that all missing outcomes do not have an outcome
       
-      ## MAR:
-      sens_anal_mar_no_outc <- calculate_risks(data, pnc_dist, sev_dist, 
-                                               preeclampsia_mar_no_outc)
-      
-      ## MNAR:
-      sens_anal_mar_mnar_no_outc <- calculate_risks(data, pnc_dist, sev_dist,
+      sens_anal_mar_mnar_no_outc <- calculate_risks(data, sev_dist,
                                                     preeclampsia_marmnar_no_outc)
 
   
@@ -212,16 +168,11 @@ conduct_analysis <- function(data){
     pnc_dist = list(pnc_dist),
     sev_dist = list(sev_dist),
     potential_risks = list(potential_risks),
-    observed_deliveries_mar = list(observed_deliveries_mar),
-    observed_deliveries_mar_mnar = list(observed_deliveries_mar_mnar),
-    observed_outcomes_mar = list(observed_outcomes_mar),
-    observed_outcomes_mar_mnar = list(observed_outcomes_mar_mnar),
-    tte_mar = list(tte_mar),
-    tte_mar_mnar = list(tte_mar_mnar),
-    sens_anal_mar_all_outc = list(sens_anal_mar_all_outc),
-    sens_anal_mar_mnar_all_outc = list(sens_anal_mar_mnar_all_outc),
-    sens_anal_mar_no_outc = list(sens_anal_mar_no_outc),
-    sens_anal_mar_mnar_no_outc = list(sens_anal_mar_mnar_no_outc)
+    observed_deliveries = list(observed_deliveries_mar_mnar),
+    observed_outcomes = list(observed_outcomes_mar_mnar),
+    tte = list(tte_mar_mnar),
+    sens_anal_all_outc = list(sens_anal_mar_mnar_all_outc),
+    sens_anal_no_outc = list(sens_anal_mar_mnar_no_outc)
   ))
 
 }
@@ -279,35 +230,22 @@ get_severity_dist <- function(data){
 # the potential outcomes. 
 ##############################################
 
-calculate_pot_risks <- function(dataset, pnc_dist){
+calculate_pot_risks <- function(dataset){
   
   # Calculate the risks using the potential outcomes
-  pot_out_risks_strat <- dataset %>% 
-    group_by(pnc_wk)%>% 
+  pot_out_risks <- dataset %>% 
     summarize(
       risk0 = sum(preeclampsia0) / n(),
       risk1 = sum(preeclampsia1) / n(),
       rd = risk1 - risk0,
       rr = risk1 / risk0
     )
-  
-  # Calculate the risks standardized to the PNC dist at baseline
-  risk0 <- sum(pot_out_risks_strat$risk0 * pnc_dist)
-  risk1 <- sum(pot_out_risks_strat$risk1 * pnc_dist)
-  
-  pot_out_risks_overall <- tibble(
-    pnc_wk = 'all',
-    risk0 = risk0,
-    risk1 = risk1,
-    rd = risk1 - risk0,
-    rr = risk1 / risk0
-  )
-  
-  pot_out_risks <- rbind(pot_out_risks_strat, pot_out_risks_overall)
-  
+
   return(pot_out_risks)
   
 }
+
+
 
 
 ##############################################
@@ -325,17 +263,13 @@ calculate_pot_risks <- function(dataset, pnc_dist){
 
 # Revised so that I can call the outcome variable for calculating risks in the function.
 
-calculate_risks <- function(dataset, pnc_dist, sev_dist, risk_var){
+calculate_risks <- function(dataset, sev_dist, risk_var){
   
   risk_var <- enquo(risk_var)
   
-  # Ensure pnc_wk is character type
-  dataset <- dataset %>% 
-    mutate(pnc_wk = as.character(pnc_wk))
-  
-  # Calculate the risks using the potential outcomes
+  # Calculate the risks within strata of treatment and severity
   strat_risks <- dataset %>% 
-    group_by(trt, pnc_wk, severity) %>% 
+    group_by(trt, severity) %>% 
     summarize(
       risk = sum(!!risk_var) / n(),
       .groups = 'drop'
@@ -345,30 +279,21 @@ calculate_risks <- function(dataset, pnc_dist, sev_dist, risk_var){
   # and multiply through in order to calculate the standardized risks within 
   # each trt and pnc_wk strata.
   merge_sev_prop <- left_join(strat_risks, sev_dist, by = c("severity" = "severity")) %>% 
-    rowwise() %>% 
+    # rowwise() %>% 
     mutate(std_risk = risk * prop) %>% 
-    group_by(trt, pnc_wk) %>% 
+    group_by(trt) %>% 
     summarize(risk = sum(std_risk),
               .groups = 'drop')
   
   strata_risks_wide <- merge_sev_prop %>% 
     pivot_wider(names_from = trt, values_from = risk, names_prefix = "risk")
   
-  # Calculate the risks standardized to the PNC dist at baseline
-  risk0 <- sum(strata_risks_wide$risk0 * pnc_dist)
-  risk1 <- sum(strata_risks_wide$risk1 * pnc_dist)
-  
-  risks_overall <- tibble(
-    pnc_wk = 'all',
-    risk0 = risk0,
-    risk1 = risk1
-  )
-  
-  risks <- bind_rows(strata_risks_wide, risks_overall) %>% 
-    rowwise() %>% 
+  risks <- strata_risks_wide %>% 
+    ungroup() %>% 
+    # rowwise() %>% 
     mutate(rd = risk1 - risk0,
-           rr = risk1 / risk0) %>% 
-    ungroup()
+           rr = risk1 / risk0)
+    
   
   return(risks)
 }
@@ -414,7 +339,6 @@ aj_estimator <- function(data_subset, outcome_ind, time_var) {
   
   summod <- data.frame(t = mod$time,
                        r = mod$pstate[, 2], 
-                       #se = mod$std.err[, 2],
                        trt = c(rep(0, length(mod[["strata"]][mod[["strata"]] == "trt=0"])), 
                                rep(1, length(mod[["strata"]][mod[["strata"]] == "trt=1"])))
   ) %>%
@@ -456,12 +380,13 @@ calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_va
   outcome_ind <- enquo(outcome_ind)
   time_var <- enquo(time_var)
   
+  # Make sure pnc_wk is a character variable
   dataset <- dataset %>% 
     mutate(pnc_wk = as.character(pnc_wk))
   
-  # Jitter ties
+  # Jitter ties within strata of pnc_wk and trt
   mar <- dataset %>% 
-    group_by(!!time_var) %>% 
+    group_by(pnc_wk, trt, !!time_var) %>% 
     add_tally(name = "count") %>% 
     ungroup() %>% 
     mutate(
@@ -491,14 +416,14 @@ calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_va
   
   # Left merge the severity distribution onto the risks
   results_sev_merge <- left_join(results, sev_dist, by = c("severity" = "severity")) %>% 
-    rowwise() %>% 
     mutate(risk0_std = risk0 * prop,
            risk1_std = risk1 * prop) %>% 
+    # Summarize the risks within strata of PNC week
     group_by(pnc_wk) %>% 
     summarize(risk0 = sum(risk0_std),
               risk1 = sum(risk1_std))
   
-  # Calculate the overall risks
+  # Calculate the overall risks - Standardize according to the PNC distribution at baseline in the whole population
   risk0 <- sum(results_sev_merge$risk0 * pnc_dist)
   risk1 <- sum(results_sev_merge$risk1 * pnc_dist)
   overall_risks <- tibble(
@@ -517,4 +442,86 @@ calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_va
 }
 
 
+# OLD VERSIONS OF FUNCTIONS
 
+
+
+# calculate_pot_risks <- function(dataset, pnc_dist){
+#   
+#   # Calculate the risks using the potential outcomes
+#   pot_out_risks_strat <- dataset %>% 
+#     group_by(pnc_wk)%>% 
+#     summarize(
+#       risk0 = sum(preeclampsia0) / n(),
+#       risk1 = sum(preeclampsia1) / n(),
+#       rd = risk1 - risk0,
+#       rr = risk1 / risk0
+#     )
+#   
+#   # Calculate the risks standardized to the PNC dist at baseline
+#   risk0 <- sum(pot_out_risks_strat$risk0 * pnc_dist)
+#   risk1 <- sum(pot_out_risks_strat$risk1 * pnc_dist)
+#   
+#   pot_out_risks_overall <- tibble(
+#     pnc_wk = 'all',
+#     risk0 = risk0,
+#     risk1 = risk1,
+#     rd = risk1 - risk0,
+#     rr = risk1 / risk0
+#   )
+#   
+#   pot_out_risks <- rbind(pot_out_risks_strat, pot_out_risks_overall)
+#   
+#   return(pot_out_risks)
+#   
+# }
+
+
+# calculate_risks <- function(dataset, pnc_dist, sev_dist, risk_var){
+#   
+#   risk_var <- enquo(risk_var)
+#   
+#   # Ensure pnc_wk is character type
+#   dataset <- dataset %>% 
+#     mutate(pnc_wk = as.character(pnc_wk))
+#   
+#   # Calculate the risks using the potential outcomes
+#   strat_risks <- dataset %>% 
+#     group_by(trt, pnc_wk, severity) %>% 
+#     summarize(
+#       risk = sum(!!risk_var) / n(),
+#       .groups = 'drop'
+#     )
+#   
+#   # Merge the severity distribution among everyone at baseline on
+#   # and multiply through in order to calculate the standardized risks within 
+#   # each trt and pnc_wk strata.
+#   merge_sev_prop <- left_join(strat_risks, sev_dist, by = c("severity" = "severity")) %>% 
+#     rowwise() %>% 
+#     mutate(std_risk = risk * prop) %>% 
+#     group_by(trt, pnc_wk) %>% 
+#     summarize(risk = sum(std_risk),
+#               .groups = 'drop')
+#   
+#   strata_risks_wide <- merge_sev_prop %>% 
+#     pivot_wider(names_from = trt, values_from = risk, names_prefix = "risk")
+#   
+#   # Calculate the risks standardized to the PNC dist at baseline
+#   risk0 <- sum(strata_risks_wide$risk0 * pnc_dist)
+#   risk1 <- sum(strata_risks_wide$risk1 * pnc_dist)
+#   
+#   risks_overall <- tibble(
+#     pnc_wk = 'all',
+#     risk0 = risk0,
+#     risk1 = risk1
+#   )
+#   
+#   risks <- bind_rows(strata_risks_wide, risks_overall) %>% 
+#     ungroup() %>% 
+#     # rowwise() %>% 
+#     mutate(rd = risk1 - risk0,
+#            rr = risk1 / risk0) %>% 
+#     
+#     
+#     return(risks)
+# }

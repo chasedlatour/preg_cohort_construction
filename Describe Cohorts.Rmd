@@ -27,6 +27,8 @@ First, we must read in the necessary data files.
 
 describe <- tar_read(all_descriptives)
 
+analyses <- tar_read(all_analyses)
+
 ```
 
 # Describe the Cohort
@@ -50,5 +52,27 @@ describe %>%
       
 
 
+
+```
+
+# Analytic Results
+
+```{r eval=FALSE}
+
+# Prepare the dataset so that we can look at it.
+analyses2 <- analyses %>% 
+  mutate(
+    # truth_r0 = map_dbl(potential_risks, ~subset(.x, pnc_wk == "all")$risk0)
+    truth = map(potential_risks, ~.x %>% rename_with(~paste0("truth_", .))),
+    observed_del = map(observed_deliveries, ~.x %>%  rename_with(~paste0("obs_del_", .))),
+    observed_out = map(observed_outcomes, ~.x %>% rename_with(~paste0("obs_out_", .))),
+    tte = map(observed_outcomes, ~.x %>% filter(pnc_wk == "all") %>% rename_with(~paste0("all_preg_", .))),
+    tte_all_outc = map(sens_anal_all_outc, ~.x %>% rename_with(~paste0("all_preg_all_outc_", .))),
+    tte_no_outc = map(sens_anal_no_outc, ~.x %>% rename_with(~paste0("all_preg_no_outc_", .)))
+  ) %>% 
+  select(rr_abortion, rr_preec, marginal_p_miss_severity, marginal_p_miss_miscarriage,
+         truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc) %>% 
+  unnest(c(truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc)) %>% 
+  select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
 
 ```
