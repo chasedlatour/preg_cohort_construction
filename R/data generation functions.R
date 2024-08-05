@@ -93,10 +93,6 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
                      potential_preec_untrt, potential_preec_trt,
                      revised_preg, pnc_prob){
   
-  # Per Morris et al. 2019. Save the random state at the beginning of 
-  # the simulation in case want it later
-  initial_seed <- list(.Random.seed)
-  
   # Get the severity distribution from a multinomial random variable
   # We assume that there is an equal distribution across three levels. 
   # Otherwise, this needs to be modified.
@@ -157,7 +153,7 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     ##### GENERATE PNC ENCOUNTERS -- Step 7
     
     # Determine gestational week of indexing prenatal encounter
-    pnc_wk = sample(x = c(4, 7, 16), size = n, prob = p_indx_pnc, replace = TRUE),
+    # pnc_wk = sample(x = c(4, 7, 16), size = n, prob = p_indx_pnc, replace = TRUE),
     
     # List of indicator variables for PNC encounters
     # We incorporate indexing prenatal encounter later
@@ -166,14 +162,14 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
   )
   
   # Final random state
-  finish_seed <- list(.Random.seed)
+  # finish_seed <- list(.Random.seed)
   
-  ## Store the random states in the final dataset.
-  data <- data %>% 
-    mutate(
-      start_seed = initial_seed,
-      end_seed = finish_seed
-    )
+  # ## Store the random states in the final dataset.
+  # data <- data %>% 
+  #   mutate(
+  #     start_seed = initial_seed,
+  #     end_seed = finish_seed
+  #   )
   
   return(data)
   
@@ -330,138 +326,6 @@ sample_pnc <- function(data, sev) {
   
   return(list(out))
 }
-
-
-
-
-
-
-# # OLD HELPER FUNCTION
-# ### FUNCTION: logodds_to_p()
-# # This function converts the log-odds into a
-# # probability. Important for deriving probabilities
-# # from the logit function.
-# logodds_to_p <- function(logodds){
-#   
-#   p <- exp(logodds)/(1 + exp(logodds))
-#   
-#   return(p)
-#   
-# }
-
-
-
-
-
-
-
-
-### OLD VERSION OF GENERATE()
-# This function was written so that LTFU due to severity was generated
-# in this stage. However, it is less computationally intense to only
-# generate the DGM once and then incorporate all missingness later.
-# generate <- function(n_sim, n, p_sev_beta, p_trt_sev, p_indx_pnc){
-#   
-#   # Per Morris et al. 2019. Save the random state at the beginning of the simulation in case want it later.
-#   initial_seed <- list(.Random.seed)
-#   
-#   # Get the severity distribution from a multinomial random variable
-#   # We assume that there is an equal distribution across three levels. 
-#   # Otherwise, this needs to be modified.
-#   severity_dist = rmultinom(n=1, size=n, prob=c(1/3, 1/3, 1/3))
-#   
-#   # Get the probabilities associated with the betas for each
-#   # severity level - calculated via logistic regression
-#   p_missing_sev <- c(logodds_to_p(p_sev_beta[1]),
-#                      logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
-#                      logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
-#   
-#   
-#   ######## GENERATE PEOPLE AND BASELINE VALUES
-#   
-#   # Create the dataset that going to output
-#   data <- dplyr::tibble(
-#     
-#     # Simulation ID -- Only important if we simulate more than one simulation cohort
-#     sim_id = n_sim, 
-#     
-#     # Each individual's ID
-#     id = 1:n, 
-#     
-#     # Generate 0 through 40 gestational weeks - 1 vector
-#     # This indexed prenatal care encounters, not outcomes. Outcomes occur at 1+ this.
-#     # Note: R indexes vectors from 1, not 0, as we have done for these gestational weeks
-#     pnc_gw = list(seq(0,40, by = 1)),
-#     
-#     # Treatment needs to be assigned AFTER the cohort is selected. Otherwise,
-#     # there is too much imbalance and don't get asymptotic convergence of true
-#     # and observed treatment effect. -- Thus, done later.
-#     
-#     # Assign a person's hypertension severity. 
-#     severity = c(rep(0, as.numeric(severity_dist[1,1])), 
-#                  rep(1, severity_dist[2,1]),
-#                  rep(2, severity_dist[3,1])),
-#     # 0 = Low, 1 = Moderate, 2 = High Severity
-#     
-#     # Assign a treatment probability to the person dependent upon
-#     # their disease severity
-#     # Severity indexed as 0, 1, 2, but R indexes vectors from 1. Thus, added 1
-#     p_trt = p_trt_sev[severity+1],
-#     
-#     # Generate missingness probabilities for each person
-#     p_missing_by_sev = p_missing_sev[severity+1],
-#     
-#     # Select missingness values for each person's gestational week
-#     # manually input as 41
-#     missing_by_sev = purrr::map(p_missing_by_sev,
-#                                 ~rbinom(41, 1, .x)),
-#     
-#     ##### GENERATE POTENTIAL PREGNANCY OUTCOMES
-#     
-#     ## Step 2: Untreated
-#     preg_outcomes_untrt = purrr::map(severity, ~sample_outcomes_for_id(potential_preg_untrt, .x)),
-#     
-#     ## Step 3: Treated
-#     preg_outcomes_trt = purrr::map(severity, ~sample_outcomes_for_id(potential_preg_trt, .x)),
-#     
-#     ##### GENERATE POTENTIAL PREECLAMPSIA OUTCOMES
-#     
-#     ## Step 4: Untreated
-#     preec_outcomes_untrt = purrr::map(severity, ~sample_preeclampsia(potential_preec_untrt, .x)),
-#     
-#     ## Step 5: Treated
-#     preec_outcomes_trt = purrr::map(severity, ~sample_preeclampsia(potential_preec_trt, .x)),
-#     
-#     ##### GENERATE REVISED OUTCOMES IF PREECLAMPSIA -- Step 6
-#     
-#     revised_preg = purrr::map(severity, ~sample_revised_preg(revised_preg, .x)),
-#     
-#     ##### GENERATE PNC ENCOUNTERS -- Step 7
-#     
-#     # Determine gestational week of indexing prenatal encounter
-#     pnc_wk = sample(x = c(4, 7, 16), size = n, prob = p_indx_pnc, replace = TRUE),
-#     
-#     # List of indicator variables for PNC encounters
-#     # We incorporate indexing prenatal encounter later
-#     pnc_enc = purrr::map(severity, ~sample_pnc(pnc_prob, .x))
-#     
-#   )
-#   
-#   # Final random state
-#   finish_seed <- list(.Random.seed)
-#   
-#   ## Store the random states in the final dataset.
-#   data <- data %>% 
-#     mutate(
-#       start_seed = initial_seed,
-#       end_seed = finish_seed
-#     )
-#   
-#   return(data)
-#   
-# }
-
-
 
 
 

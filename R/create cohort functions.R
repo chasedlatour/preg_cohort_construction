@@ -19,7 +19,8 @@
 #####################################################
 
 generate_cohort <- function(data, marginal_p_miss_severity, beta12, 
-                            marginal_p_miss_miscarriage, gamma1){ #, save_name_cohort
+                            marginal_p_miss_miscarriage, gamma1,
+                            pnc_wk){
   
   # Get the expected value of severity in the missing cohort
   ## Distribution of severity at baseline : 1/3, 1/3, 1/3
@@ -43,7 +44,8 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
     split_data, 
     MoreArgs = list(p_sev_beta = p_sev_beta,
                     marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-                    gamma1 = gamma1),
+                    gamma1 = gamma1, 
+                    pnc_wk = pnc_wk),
     SIMPLIFY = FALSE
   ) %>% bind_rows()
   
@@ -76,7 +78,7 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
 #####################################################
 
 create_cohort <- function(dataset, p_sev_beta, 
-                          marginal_p_miss_miscarriage, gamma1){
+                          marginal_p_miss_miscarriage, gamma1, pnc_wk){
   
   # Get the probabilities associated with the betas for each
   # severity level - calculated via logistic regression
@@ -123,7 +125,7 @@ create_cohort <- function(dataset, p_sev_beta,
   
   
   # Assign the treatment values among those where include ne 0
-  data2 <- assign_trt(subset(data, include != 0)) %>% 
+  data2 <- assign_trt(subset(data, include == 1)) %>% 
     # Create variables for the observed outcomes - ignore missingness at this stage
     mutate(
       preeclampsia_pre_miss = ifelse(trt == 0,
@@ -341,13 +343,9 @@ untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_out
   # and 16 weeks of gestation -- A person had to NOT have had a fetal
   # death prior to that gestational week to be included
   # Make an indicator variable for if they should be included
-  if (final_preg_t > 4  & pnc_wk == 4){
-    include = 4
-  } else if (final_preg_t > 7 & pnc_wk == 7){
-    include = 7
-  } else if (final_preg_t > 16 & pnc_wk == 16){
-    include = 16
-  } else{
+  if (final_preg_t > pnc_wk){
+    include = 1
+  } else {
     include = 0
   }
   

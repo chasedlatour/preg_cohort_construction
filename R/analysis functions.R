@@ -15,12 +15,13 @@
 #####################################################
 
 # Test
-# tar_data <- tar_read(cohort_data_0.0565_0.7_0_.0.2_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_20000)
+# tar_data <- tar_read(cohort_data_0.0565_0.7_0_.0.2_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_10000)
 
 run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
-                         beta12, marginal_p_miss_miscarriage, gamma1){
+                         beta12, marginal_p_miss_miscarriage, gamma1,
+                         pnc_wk){
   
-  hold <- prep_data_for_analysis(data)
+  hold <- prep_data_for_analysis(data, pnc_wk)
   
   hold2 <- conduct_analysis(hold) %>% 
     mutate(
@@ -29,7 +30,8 @@ run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
       marginal_p_miss_severity = marginal_p_miss_severity,
       beta12 = beta12,
       marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-      gamma1 = gamma1
+      gamma1 = gamma1,
+      pnc_wk = pnc_wk
     )
   
   return(hold2)
@@ -46,7 +48,7 @@ run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
 # functions.
 #########################################
 
-prep_data_for_analysis <- function(data){
+prep_data_for_analysis <- function(data, pnc_wk){
   
   # First, need to do some data cleaning
   hold <- data %>% 
@@ -124,9 +126,6 @@ prep_data_for_analysis <- function(data){
 
 conduct_analysis <- function(data){
   
-  # Get the pnc distribution for each simulation
-  pnc_dist <- get_pnc_dist(data)
-  
   # Get the severity distribution for each simulation
   sev_dist <- get_severity_dist(data)
   
@@ -147,7 +146,7 @@ conduct_analysis <- function(data){
   
   # Time-to-event analyses
     
-    tte_mar_mnar <- calculate_aj_risks(data, pnc_dist, sev_dist, final_pregout_mar_mnar,
+    tte_mar_mnar <- calculate_aj_risks(data, sev_dist, final_pregout_mar_mnar,
                                        final_pregout_marmnar_tte)
     
   # Sensitivity analyses
@@ -165,7 +164,7 @@ conduct_analysis <- function(data){
   
   # return(data)
   return(tibble(
-    pnc_dist = list(pnc_dist),
+    # pnc_dist = list(pnc_dist),
     sev_dist = list(sev_dist),
     potential_risks = list(potential_risks),
     observed_deliveries = list(observed_deliveries_mar_mnar),
@@ -179,25 +178,6 @@ conduct_analysis <- function(data){
 
  
 
-
-
-##############################################
-# FUNCTION: get_pnc_dist()
-# PURPOSE: The purpose of this function is to 
-# get the distribution of patients by the
-# gestational week of their first pnc 
-# encounter.
-##############################################
-
-get_pnc_dist <- function(data){
-  
-  pnc_dist <- (data %>%
-                 group_by(pnc_wk) %>%
-                 summarize(prop = n() / nrow(data)))$prop
-  
-  return(pnc_dist)
-  
-}
 
 
 
@@ -374,19 +354,19 @@ aj_estimator <- function(data_subset, outcome_ind, time_var) {
 
 ## Revised
 
-calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_var) {
+calculate_aj_risks <- function(dataset, sev_dist, outcome_ind, time_var) {
   
   # browser()
   outcome_ind <- enquo(outcome_ind)
   time_var <- enquo(time_var)
   
-  # Make sure pnc_wk is a character variable
-  dataset <- dataset %>% 
-    mutate(pnc_wk = as.character(pnc_wk))
+  # # Make sure pnc_wk is a character variable
+  # dataset <- dataset %>% 
+  #   mutate(pnc_wk = as.character(pnc_wk))
   
   # Jitter ties within strata of pnc_wk and trt
   mar <- dataset %>% 
-    group_by(pnc_wk, trt, !!time_var) %>% 
+    group_by(trt, !!time_var) %>% 
     add_tally(name = "count") %>% 
     ungroup() %>% 
     mutate(
@@ -395,133 +375,39 @@ calculate_aj_risks <- function(dataset, pnc_dist, sev_dist, outcome_ind, time_va
       time = ifelse(count > 1, !!time_var + jitter, !!time_var)
     )
   
-  # Split the dataset by severity and pnc_wk
-  split_data <- split(mar, list(mar$severity, mar$pnc_wk))
+  # Split the dataset by severity
+  split_data <- split(mar, list(mar$severity))
   
   # Apply the aj_estimator function to each subset
-  results_list <- lapply(split_data, function(subset) aj_estimator(subset, outcome_ind = !!outcome_ind, 
+  results_list <- lapply(split_data, function(subset) aj_estimator(subset, 
+                                                                   outcome_ind = !!outcome_ind, 
                                                                    time_var = !!time_var))
   
   # Combine the results into a single data frame
   results <- bind_rows(results_list, .id = "group")
   
-  # Extract severity and pnc_wk from the group column
+  # Extract severity from the group column
   results <- results %>%
-    separate(group, into = c("severity", "pnc_wk"), sep = "\\.")
+    separate(group, into = c("severity"), sep = "\\.")
   
-  # Convert severity and pnc_wk to their original data types if necessary
+  # Convert severity to its original data types if necessary
   results <- results %>%
-    mutate(severity = as.numeric(severity),
-           pnc_wk = as.character(pnc_wk))
+    mutate(severity = as.numeric(severity))
   
   # Left merge the severity distribution onto the risks
   results_sev_merge <- left_join(results, sev_dist, by = c("severity" = "severity")) %>% 
     mutate(risk0_std = risk0 * prop,
            risk1_std = risk1 * prop) %>% 
     # Summarize the risks within strata of PNC week
-    group_by(pnc_wk) %>% 
+    ungroup() %>% 
     summarize(risk0 = sum(risk0_std),
               risk1 = sum(risk1_std))
   
-  # Calculate the overall risks - Standardize according to the PNC distribution at baseline in the whole population
-  risk0 <- sum(results_sev_merge$risk0 * pnc_dist)
-  risk1 <- sum(results_sev_merge$risk1 * pnc_dist)
-  overall_risks <- tibble(
-    pnc_wk = 'overall',
-    risk0 = risk0,
-    risk1 = risk1
-  )
-  
   # Final risks dataset
-  risks <- bind_rows(results_sev_merge, overall_risks) %>% 
-    rowwise() %>% 
+  risks <- results_sev_merge %>% 
+    # rowwise() %>% 
     mutate(rd = risk1 - risk0,
            rr = risk1 / risk0)
   
   return(risks)
 }
-
-
-# OLD VERSIONS OF FUNCTIONS
-
-
-
-# calculate_pot_risks <- function(dataset, pnc_dist){
-#   
-#   # Calculate the risks using the potential outcomes
-#   pot_out_risks_strat <- dataset %>% 
-#     group_by(pnc_wk)%>% 
-#     summarize(
-#       risk0 = sum(preeclampsia0) / n(),
-#       risk1 = sum(preeclampsia1) / n(),
-#       rd = risk1 - risk0,
-#       rr = risk1 / risk0
-#     )
-#   
-#   # Calculate the risks standardized to the PNC dist at baseline
-#   risk0 <- sum(pot_out_risks_strat$risk0 * pnc_dist)
-#   risk1 <- sum(pot_out_risks_strat$risk1 * pnc_dist)
-#   
-#   pot_out_risks_overall <- tibble(
-#     pnc_wk = 'all',
-#     risk0 = risk0,
-#     risk1 = risk1,
-#     rd = risk1 - risk0,
-#     rr = risk1 / risk0
-#   )
-#   
-#   pot_out_risks <- rbind(pot_out_risks_strat, pot_out_risks_overall)
-#   
-#   return(pot_out_risks)
-#   
-# }
-
-
-# calculate_risks <- function(dataset, pnc_dist, sev_dist, risk_var){
-#   
-#   risk_var <- enquo(risk_var)
-#   
-#   # Ensure pnc_wk is character type
-#   dataset <- dataset %>% 
-#     mutate(pnc_wk = as.character(pnc_wk))
-#   
-#   # Calculate the risks using the potential outcomes
-#   strat_risks <- dataset %>% 
-#     group_by(trt, pnc_wk, severity) %>% 
-#     summarize(
-#       risk = sum(!!risk_var) / n(),
-#       .groups = 'drop'
-#     )
-#   
-#   # Merge the severity distribution among everyone at baseline on
-#   # and multiply through in order to calculate the standardized risks within 
-#   # each trt and pnc_wk strata.
-#   merge_sev_prop <- left_join(strat_risks, sev_dist, by = c("severity" = "severity")) %>% 
-#     rowwise() %>% 
-#     mutate(std_risk = risk * prop) %>% 
-#     group_by(trt, pnc_wk) %>% 
-#     summarize(risk = sum(std_risk),
-#               .groups = 'drop')
-#   
-#   strata_risks_wide <- merge_sev_prop %>% 
-#     pivot_wider(names_from = trt, values_from = risk, names_prefix = "risk")
-#   
-#   # Calculate the risks standardized to the PNC dist at baseline
-#   risk0 <- sum(strata_risks_wide$risk0 * pnc_dist)
-#   risk1 <- sum(strata_risks_wide$risk1 * pnc_dist)
-#   
-#   risks_overall <- tibble(
-#     pnc_wk = 'all',
-#     risk0 = risk0,
-#     risk1 = risk1
-#   )
-#   
-#   risks <- bind_rows(strata_risks_wide, risks_overall) %>% 
-#     ungroup() %>% 
-#     # rowwise() %>% 
-#     mutate(rd = risk1 - risk0,
-#            rr = risk1 / risk0) %>% 
-#     
-#     
-#     return(risks)
-# }

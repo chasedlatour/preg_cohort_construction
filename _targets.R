@@ -70,7 +70,7 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       ".xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 20000
+treatment_effects$n = 10000
 
 
 # Create a dataset with the missing data parameters
@@ -117,7 +117,8 @@ list(
             marginal_p_miss_severity = marginal_p_miss_severity,
             beta12 = beta12,
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-            gamma1 = gamma1
+            gamma1 = gamma1,
+            pnc_wk = 4 # ADDED
           )
           ),
         # Describe the data
@@ -130,7 +131,8 @@ list(
             marginal_p_miss_severity = marginal_p_miss_severity,
             beta12 = beta12,
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-            gamma1 = gamma1
+            gamma1 = gamma1,
+            pnc_wk = 4
           )
         ),
         # Analyze the data
@@ -143,7 +145,8 @@ list(
             marginal_p_miss_severity = marginal_p_miss_severity,
             beta12 = beta12,
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-            gamma1 = gamma1
+            gamma1 = gamma1,
+            pnc_wk = 4
           )
         )
       ),

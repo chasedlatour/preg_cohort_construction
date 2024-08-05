@@ -10,7 +10,8 @@
 
 describe_cohort <- function(dataset, rr_abortion, rr_preec,
                             marginal_p_miss_severity, beta12,
-                            marginal_p_miss_miscarriage, gamma1){
+                            marginal_p_miss_miscarriage, gamma1,
+                            pnc_wk){
   
   hold <- dataset %>%
     group_by(trt) %>% 
@@ -24,13 +25,13 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       n_high = sum(severity == 2),
       n_high_perc = round(100*n_high/n(), 2),
       
-      # Distribution by first pnc encounter
-      n_pnc_4 = sum(pnc_wk == 4),
-      pnc4_perc = round(100*n_pnc_4/n(),2),
-      n_pnc_7 = sum(pnc_wk == 7),
-      pnc7_perc = round(100*n_pnc_7/n(),2),
-      n_pnc_16 = sum(pnc_wk == 16),
-      pnc16_perc = round(100*n_pnc_16/n(),2),
+      # # Distribution by first pnc encounter
+      # n_pnc_4 = sum(pnc_wk == 4),
+      # pnc4_perc = round(100*n_pnc_4/n(),2),
+      # n_pnc_7 = sum(pnc_wk == 7),
+      # pnc7_perc = round(100*n_pnc_7/n(),2),
+      # n_pnc_16 = sum(pnc_wk == 16),
+      # pnc16_perc = round(100*n_pnc_16/n(),2),
       
       # Preterm birth
       n_preterm_all = sum(pregout_t_pre_miss >= 18 & pregout_t_pre_miss < 35),
@@ -98,10 +99,10 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       n_low = paste0(n_low," (", n_low_perc, "%)"),
       n_med = paste0(n_med," (", n_med_perc, "%)"),
       n_high = paste0(n_high," (", n_high_perc, "%)"),
-      # Number of pregnancies per pnc
-      n_pnc_4 = paste0(n_pnc_4, " (", pnc4_perc, "%)"),
-      n_pnc_7 = paste0(n_pnc_7, " (", pnc7_perc, "%)"),
-      n_pnc_16 = paste0(n_pnc_16, " (", pnc4_perc, "%)"),
+      # # Number of pregnancies per pnc
+      # n_pnc_4 = paste0(n_pnc_4, " (", pnc4_perc, "%)"),
+      # n_pnc_7 = paste0(n_pnc_7, " (", pnc7_perc, "%)"),
+      # n_pnc_16 = paste0(n_pnc_16, " (", pnc4_perc, "%)"),
       # Preterm birth
       n_preterm_all = paste0(n_preterm_all, " (", preterm_p, ")%"),
       # Pregnancy outcomes
@@ -124,28 +125,20 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       missing_mnar = paste0(missing_mnar, " (", missing_mnar_perc, "%)"),
       missing_mnar_t = paste0(missing_mnar_med, " (", missing_mnar_p25, ", ", missing_mnar_p75, ")") 
     ) %>% 
-    select(trt, n_low, n_med, n_high, n_pnc_4, n_pnc_7, n_pnc_16,
+    select(trt, n_low, n_med, n_high, #n_pnc_4, n_pnc_7, n_pnc_16,
            n_preterm_all, n_miscarriage_all,
            n_stillbirth_all, n_livebirth_all, miscarriage_t, stillbirth_t, livebirth_t,
            n_preeclampsia, preeclampsia_t, n_preeclampsia_l32,
            missing_mar, missing_mar_t, missing_mnar, missing_mnar_t
     ) %>% 
-    # pivot_longer(
-    #   cols = !trt,
-    #   names_to = "SummaryStatistic",
-    #   values_to = "value"
-    # ) %>% 
-    # pivot_wider(
-    #   names_from = c(SummaryStatistic, trt),
-    #   values_from = value
-    # ) %>% 
     mutate(
       rr_abortion = rr_abortion, 
       rr_preec = rr_preec,
       marginal_p_miss_severity = marginal_p_miss_severity, 
       beta12 = beta12,
       marginal_p_miss_miscarriage = marginal_p_miss_miscarriage, 
-      gamma1 = gamma1
+      gamma1 = gamma1,
+      pnc_wk = pnc_wk
     )
   
   return(hold)
