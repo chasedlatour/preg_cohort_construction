@@ -75,13 +75,16 @@ treatment_effects$n = 10000
 
 # Create a dataset with the missing data parameters
 missing_params <- data.frame(
-  marginal_p_miss_severity = 1.13 * c(0, 0.0125, 0.025, 0.0375, 0.05, 
-                                      0, 0.0500, 0.100, 0.1500, 0.20),
+  marginal_p_miss_severity = rep(1.13 * c(0, 0.025, 0.05,
+                                          0, 0.100, 0.20), 2),
   beta12 = 0.7,
-  marginal_p_miss_miscarriage = 4.9 * c(0.05, 0.0375, 0.025, 0.0125, 0,
-                                        0.20, 0.1500, 0.100, 0.0500, 0),
+  marginal_p_miss_miscarriage = c(2.5 * c(0.05, 0.025, 0,
+                                          0.20, 0.100, 0),
+                                  4.9 * c(0.05, 0.025, 0,
+                                          0.20, 0.100, 0)),
   # Cut it down from 5 so not too large
-  gamma1 = -0.2
+  gamma1 = -0.2,
+  pnc_wk = c(rep(7, 6), rep(16, 6))
 )
 
 
@@ -118,7 +121,7 @@ list(
             beta12 = beta12,
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
             gamma1 = gamma1,
-            pnc_wk = 4 # ADDED
+            pnc_wk = pnc_wk
           )
           ),
         # Describe the data
@@ -132,7 +135,7 @@ list(
             beta12 = beta12,
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
             gamma1 = gamma1,
-            pnc_wk = 4
+            pnc_wk = pnc_wk
           )
         ),
         # Analyze the data
@@ -146,7 +149,7 @@ list(
             beta12 = beta12,
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
             gamma1 = gamma1,
-            pnc_wk = 4
+            pnc_wk = pnc_wk
           )
         )
       ),

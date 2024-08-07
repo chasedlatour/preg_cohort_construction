@@ -43,10 +43,10 @@ Create kable with description of a specified dataset. Do this for each RR combin
 
 describe %>% 
   filter(rr_abortion == 0.8 & rr_preec == 0.8) %>% 
-  select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+  select(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage,
          trt, n_low:missing_mnar_t) %>% 
   kbl() %>%
-  collapse_rows(col_names = c(marginal_p_miss_severity, marginal_p_miss_miscarriage),
+  collapse_rows(col_names = c(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage),
                 valign = "top") %>% 
   kable_classic()
       
@@ -66,7 +66,7 @@ analyses2 <- analyses %>%
     truth = map(potential_risks, ~.x %>% rename_with(~paste0("truth_", .))),
     observed_del = map(observed_deliveries, ~.x %>%  rename_with(~paste0("obs_del_", .))),
     observed_out = map(observed_outcomes, ~.x %>% rename_with(~paste0("obs_out_", .))),
-    tte = map(observed_outcomes, ~.x %>% filter(pnc_wk == "all") %>% rename_with(~paste0("all_preg_", .))),
+    tte = map(observed_outcomes, ~.x %>% rename_with(~paste0("all_preg_", .))),
     tte_all_outc = map(sens_anal_all_outc, ~.x %>% rename_with(~paste0("all_preg_all_outc_", .))),
     tte_no_outc = map(sens_anal_no_outc, ~.x %>% rename_with(~paste0("all_preg_no_outc_", .)))
   ) %>% 
@@ -74,5 +74,7 @@ analyses2 <- analyses %>%
          truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc) %>% 
   unnest(c(truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc)) %>% 
   select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
+
+
 
 ```
