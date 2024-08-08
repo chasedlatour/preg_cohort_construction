@@ -70,21 +70,19 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       ".xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 10000
+treatment_effects$n = 50000
 
 
 # Create a dataset with the missing data parameters
 missing_params <- data.frame(
-  marginal_p_miss_severity = rep(1.13 * c(0, 0.025, 0.05,
-                                          0, 0.100, 0.20), 2),
+  marginal_p_miss_severity = 1.13 * c(0, 0.025, 0.05,
+                                      0, 0.100, 0.20),
   beta12 = 0.7,
-  marginal_p_miss_miscarriage = c(2.5 * c(0.05, 0.025, 0,
-                                          0.20, 0.100, 0),
-                                  4.9 * c(0.05, 0.025, 0,
+  marginal_p_miss_miscarriage = c(4.9 * c(0.05, 0.025, 0,
                                           0.20, 0.100, 0)),
   # Cut it down from 5 so not too large
   gamma1 = -0.2,
-  pnc_wk = c(rep(7, 6), rep(16, 6))
+  pnc_wk = rep(7, 6)
 )
 
 
