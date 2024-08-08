@@ -108,9 +108,11 @@
     },
     "RcppArmadillo": {
       "Package": "RcppArmadillo",
-      "Version": "0.12.6.6.1",
-      "Source": "Repository",
+      "Version": "0.9.900.3.0",
+      "Source": "URL",
       "Repository": "CRAN",
+      "RemoteType": "url",
+      "RemoteUrl": "https://cran.r-project.org/src/contrib/Archive/RcppArmadillo/RcppArmadillo_0.9.900.3.0.tar.gz",
       "Requirements": [
         "R",
         "Rcpp",
@@ -118,7 +120,7 @@
         "stats",
         "utils"
       ],
-      "Hash": "d2b60e0a15d73182a3a766ff0a7d0d7f"
+      "Hash": "313647c3b67127ff8b45392b99d50e1f"
     },
     "askpass": {
       "Package": "askpass",
@@ -475,8 +477,10 @@
     "etm": {
       "Package": "etm",
       "Version": "1.1.1",
-      "Source": "Repository",
+      "Source": "URL",
       "Repository": "CRAN",
+      "RemoteType": "url",
+      "RemoteUrl": "https://cran.r-project.org/src/contrib/etm_1.1.1.tar.gz",
       "Requirements": [
         "R",
         "Rcpp",
@@ -485,7 +489,7 @@
         "lattice",
         "survival"
       ],
-      "Hash": "3640f66f96821b628fc912114d24dbeb"
+      "Hash": "40303b8bbb1bbf75d68f26919d8d8462"
     },
     "evaluate": {
       "Package": "evaluate",
@@ -774,9 +778,9 @@
     },
     "igraph": {
       "Package": "igraph",
-      "Version": "2.0.3",
+      "Version": "2.0.3.9047",
       "Source": "Repository",
-      "Repository": "CRAN",
+      "Repository": "https://igraph.r-universe.dev",
       "Requirements": [
         "Matrix",
         "R",
@@ -793,7 +797,7 @@
         "utils",
         "vctrs"
       ],
-      "Hash": "c3b7d801d722e26e4cd888e042bf9af5"
+      "Hash": "afdf6d7184eeb3140ae0b44326e5ca80"
     },
     "isoband": {
       "Package": "isoband",
