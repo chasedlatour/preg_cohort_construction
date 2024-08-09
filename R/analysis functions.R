@@ -15,7 +15,8 @@
 #####################################################
 
 # Test
-# tar_data <- tar_read(cohort_data_0.0565_0.7_0_.0.2_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_10000)
+# tar_data <- tar_read(cohort_data_0_0.7_0.245_.0.2_7_0.7_0.7_Parameters_Abortion07_Preeclampsia07.xlsx_1_10000)
+
 
 run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
                          beta12, marginal_p_miss_miscarriage, gamma1,
@@ -46,6 +47,8 @@ run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
 # FUNCTION: prep_data_for_analysis()
 # PURPOSE: Prepare the data for analysis
 # functions.
+
+# Checked: 08.09.2024
 #########################################
 
 prep_data_for_analysis <- function(data, pnc_wk){
@@ -55,17 +58,11 @@ prep_data_for_analysis <- function(data, pnc_wk){
     mutate(
       
       # Make indicator variables for observed delivery
-      # obs_delivery_mar = ifelse(ltfu_mar == 'not' & pregout_t_mar >= 20,
-      #                           1,
-      #                           0),
-      obs_delivery_mar_mnar = ifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 20,
+      obs_delivery_mar_mnar = ifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 18,
                                      1,
                                      0),
       
       # Make indicator for observed pregnancy outcome
-      # obs_outcome_mar = ifelse(ltfu_mar == 'not',
-      #                          1,
-      #                          0),
       obs_outcome_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
                                     1,
                                     0),
@@ -78,14 +75,14 @@ prep_data_for_analysis <- function(data, pnc_wk){
       ## 3 = live birth wo preeclampsia
       # Calculate times to event
       
-      ## Outcome indicator
+      ## Outcome indicator - multivariate, important for AJ estimator
       final_pregout_mar_mnar = case_when(pregout_mar_mnar == 'unknown' ~ 0,
-                                         preeclampsia_mar == 1 ~ 1,
-                                         pregout_mar == 'fetaldeath' ~ 2,
-                                         pregout_mar == 'livebirth' ~ 3),
+                                         preeclampsia_mar_mnar == 1 ~ 1,
+                                         pregout_mar_mnar == 'fetaldeath' ~ 2,
+                                         pregout_mar_mnar == 'livebirth' ~ 3),
       
-      ## Time to event 
-      final_pregout_marmnar_tte = ifelse(pregout_mar == 'unknown',
+      ## Time to event - Establish the time-to-event for the outcome indicator
+      final_pregout_marmnar_tte = ifelse(pregout_mar_mnar == 'unknown',
                                          t_ltfu_mar_mnar - pnc_wk,
                                          pregout_t_mar_mnar - pnc_wk),
       
@@ -96,21 +93,15 @@ prep_data_for_analysis <- function(data, pnc_wk){
       
       # Sensitivity analysis
       
-      ## Outcome immediately upon censoring
-      # preeclampsia_mar_immediate_outc = ifelse(pregout_mar == 'unknown',
-      #                                          1,
-      #                                          preeclampsia_mar),
-      preeclampsia_marmnar_immediate_outc = ifelse(pregout_mar == 'unknown',
+      ## Outcome (pre-delivery preeclampsia) immediately upon censoring
+      preeclampsia_marmnar_immediate_outc = ifelse(pregout_mar_mnar == 'unknown',
                                                    1,
                                                    preeclampsia_mar_mnar),
       
       ## No outcome and go the full follow-up without outcome. 
-      # preeclampsia_mar_no_outc = ifelse(pregout_mar == 'unknown',
-      #                                   0,
-      #                                   preeclampsia_mar),
       preeclampsia_marmnar_no_outc = ifelse(pregout_mar_mnar == 'unknown',
-                                           0,
-                                           preeclampsia_mar_mnar)
+                                            0,
+                                            preeclampsia_mar_mnar)
       
     )
   
@@ -141,7 +132,7 @@ conduct_analysis <- function(data){
   # Get the risks among observed pregnancy outcomes
     
     observed_outcomes_mar_mnar <- data %>% 
-      filter(obs_delivery_mar_mnar == 1) %>% 
+      filter(obs_outcome_mar_mnar == 1) %>% 
       calculate_risks(sev_dist, preeclampsia_pre_miss)
   
   # Time-to-event analyses

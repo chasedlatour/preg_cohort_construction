@@ -31,50 +31,276 @@ analyses <- tar_read(all_analyses)
 
 ```
 
-# Describe the Cohort
+# Functions
 
-Create kable with description of a specified dataset. Do this for each RR combination.
-
-## $RR_{Preeclampsia} = 0.8, RR_{Abortion} = 0.8$
+Make a function that outputs a table describing a DGM
 
 ```{r}
 
-# num_packs <- nrow(describe)/2
-
-describe %>% 
-  filter(rr_abortion == 0.8 & rr_preec == 0.8) %>% 
-  select(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage,
-         trt, n_low:missing_mnar_t) %>% 
-  kbl() %>%
-  collapse_rows(col_names = c(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage),
-                valign = "top") %>% 
-  kable_classic()
-      
-
-
+describe_cohorts <- function(describe_subset){
+  
+  hold <- describe_subset %>% 
+    select(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           trt, n_low:missing_mnar_t) %>% 
+    kbl() %>%
+    collapse_rows(col_names = c(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage),
+                  valign = "top") %>%
+    kable_classic()
+  
+  return(hold)
+  
+}
 
 ```
 
-# Analytic Results
+Make a function that outputs the analytic results for a DGM
 
-```{r eval=FALSE}
+```{r}
 
-# Prepare the dataset so that we can look at it.
+# First, prepare the dataset
 analyses2 <- analyses %>% 
   mutate(
     # truth_r0 = map_dbl(potential_risks, ~subset(.x, pnc_wk == "all")$risk0)
     truth = map(potential_risks, ~.x %>% rename_with(~paste0("truth_", .))),
     observed_del = map(observed_deliveries, ~.x %>%  rename_with(~paste0("obs_del_", .))),
     observed_out = map(observed_outcomes, ~.x %>% rename_with(~paste0("obs_out_", .))),
-    tte = map(observed_outcomes, ~.x %>% rename_with(~paste0("all_preg_", .))),
+    tte = map(tte, ~.x %>% rename_with(~paste0("all_preg_", .))),
     tte_all_outc = map(sens_anal_all_outc, ~.x %>% rename_with(~paste0("all_preg_all_outc_", .))),
     tte_no_outc = map(sens_anal_no_outc, ~.x %>% rename_with(~paste0("all_preg_no_outc_", .)))
   ) %>% 
   select(rr_abortion, rr_preec, marginal_p_miss_severity, marginal_p_miss_miscarriage,
          truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc) %>% 
   unnest(c(truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc)) %>% 
-  select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
+  # select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
+  mutate(
+    marginal_p_miss_severity = marginal_p_miss_severity / 1.13,
+    marginal_p_miss_miscarriage = marginal_p_miss_miscarriage / 4.9
+  ) 
+
+# Now, output a kable
+print_analysis_kable <- function(data_subset){
+  
+  hold <- data_subset %>% 
+    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    select(!c(rr_abortion, rr_preec)) %>% 
+    kbl() %>% # col.names = NA
+    collapse_rows(columns = 1:2,
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(c(
+      "Prob Missing Due to Severity" = 1,
+      "Prob Missing Due to Abortion" = 1,
+      rep(c("$$Risk_0$$" = 1,
+      "$$Risk_1$$" = 1,
+      "RD" = 1,
+      "RR = 1"),6)
+    )) %>% 
+    add_header_above(c(
+      " " = 2,
+      "Truth" = 4,
+      "Observed Deliveries" = 4,
+      "Observed Outcomes" = 4,
+      "All Pregnancies" = 4,
+      "All Pregnancies, Assuming All Censored had Outcome" = 4,
+      "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+    ))
+  
+  return(hold)
+  
+}
 
 
+```
+
+Make a function that outputs figures of the parameters. 
+
+```{r}
+
+# Prep the dataset for figures
+
+figure_data <- analyses2 %>% 
+  pivot_longer(
+    cols = !c(rr_abortion, rr_preec, marginal_p_miss_severity, marginal_p_miss_miscarriage),
+    names_to = "estimate",
+    values_to = "value"
+  ) %>% 
+  mutate(
+    cohort = case_when(grepl("truth", estimate) ~ "Truth",
+                       grepl("obs_del", estimate) ~ "Observed Deliveries",
+                       grepl("obs_out", estimate) ~ "Observed Outcomes",
+                       grepl("all_preg_all_outc", estimate) ~ "All Pregnancies: All Outcome",
+                       grepl("all_preg_no_outc", estimate) ~ "All Pregnancies: No Outcome",
+                       grepl("all_preg", estimate) ~ "All Pregnancies: TTE"),
+    parameter = case_when(grepl("_risk0", estimate) ~ "Risk, Non-Initiators",
+                          grepl("_risk1", estimate) ~ "Risk, Initiators",
+                          grepl("_rd", estimate) ~ "Risk Difference",
+                          grepl("_rr", estimate) ~ "Risk Ratio"),
+    missing = paste0(marginal_p_miss_severity,"/", marginal_p_miss_miscarriage) ,
+    missing = factor(missing,
+                     levels = c("0/0.05", "0.025/0.025", "0.05/0",
+                                "0/0.2",  "0.1/0.1",     "0.2/0"))
+  )
+
+truths <- figure_data %>% 
+  filter(cohort == "Truth") %>% 
+  rename(truth = value) %>% 
+  select(rr_abortion, rr_preec, missing, parameter, truth)
+
+estimates <- figure_data %>% 
+  filter(cohort != "Truth")
+
+figure_data2 <- left_join(estimates, truths, by = c("rr_abortion", "rr_preec",
+                                                    "missing", "parameter"))
+
+create_figure <- function(dataset, parameter, rr_abort, rr_preec){
+  
+  param <- sym(parameter)
+  rr_abort <- sym(rr_abort)
+  rr_preeclampsia <- sym(rr_preec)
+  
+  plot <- figure_data2 %>%
+    filter(rr_abortion == rr_abort & rr_preec == rr_preeclampsia) %>%
+    filter(parameter == param) %>% 
+    ggplot(aes(x = missing, y = value, color = cohort, shape = cohort)) +
+    geom_point(size = 3, position = position_dodge(0.5)) +
+    facet_wrap(parameter ~., ncol = 1) +
+    geom_hline(aes(yintercept = truth), col = "red", linetype = "dashed") + 
+    ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abort) ~ 
+                   " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
+    xlab("Approximate Percent Missing Due to Severity/Abortion") + 
+    ylab("Parameter Estimate")
+  
+  return(plot)
+  
+}
+
+```
+
+
+# Output Results
+Create kable with description of a specified dataset. Do this for each RR combination.
+
+## $RR_{Abortion} = 0.7, RR_{Preeclampsia} = 0.7$
+
+```{r}
+    
+describe %>% 
+  filter(rr_abortion == 0.7 & rr_preec == 0.7) %>% 
+  describe_cohorts()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.7 & rr_preec == 0.7) %>% 
+  print_analysis_kable()
+
+# Risks
+create_figure(figure_data2, "Risk, Initiators", "0.7", "0.7")
+create_figure(figure_data2, "Risk, Non-Initiators", "0.7", "0.7")
+create_figure(figure_data2, "Risk Difference", "0.7", "0.7")
+create_figure(figure_data2, "Risk Ratio", "0.7", "0.7")
+
+```
+
+
+## $RR_{RR_{Abortion} = 1.0, Preeclampsia} = 0.7$
+
+```{r}
+    
+describe %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.7) %>% 
+  describe_cohorts()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.7) %>% 
+  print_analysis_kable()
+
+# Risks
+create_figure(figure_data2, "Risk, Initiators", "1", "0.7")
+create_figure(figure_data2, "Risk, Non-Initiators", "1", "0.7")
+create_figure(figure_data2, "Risk Difference", "1", "0.7")
+create_figure(figure_data2, "Risk Ratio", "1", "0.7")
+
+```
+
+
+## $RR_{RR_{Abortion} = 1.5, Preeclampsia} = 0.7$
+
+```{r}
+    
+describe %>% 
+  filter(rr_abortion == 1.5 & rr_preec == 0.7) %>% 
+  describe_cohorts()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.5 & rr_preec == 0.7) %>% 
+  print_analysis_kable()
+
+# Risks
+create_figure(figure_data2, "Risk, Initiators", "1.5", "0.7")
+create_figure(figure_data2, "Risk, Non-Initiators", "1.5", "0.7")
+create_figure(figure_data2, "Risk Difference", "1.5", "0.7")
+create_figure(figure_data2, "Risk Ratio", "1.5", "0.7")
+
+```
+
+
+## $RR_{Abortion} = 0.7, RR_{Preeclampsia} = 1.0$
+
+```{r}
+    
+describe %>% 
+  filter(rr_abortion == 0.7 & rr_preec == 1.0) %>% 
+  describe_cohorts()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.7 & rr_preec == 1.0) %>% 
+  print_analysis_kable()
+
+# Risks
+create_figure(figure_data2, "Risk, Initiators", "0.7", "1")
+create_figure(figure_data2, "Risk, Non-Initiators", "0.7", "1")
+create_figure(figure_data2, "Risk Difference", "0.7", "1")
+create_figure(figure_data2, "Risk Ratio", "0.7", "1")
+
+```
+
+
+## $RR_{RR_{Abortion} = 1.0, Preeclampsia} = 1.0$
+
+```{r}
+    
+describe %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  describe_cohorts()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  print_analysis_kable()
+
+# Risks
+create_figure(figure_data2, "Risk, Initiators", "1", "1")
+create_figure(figure_data2, "Risk, Non-Initiators", "1", "1")
+create_figure(figure_data2, "Risk Difference", "1", "1")
+create_figure(figure_data2, "Risk Ratio", "1", "1")
+
+```
+
+
+## $RR_{RR_{Abortion} = 1.5, Preeclampsia} = 1.0$
+
+```{r}
+    
+describe %>% 
+  filter(rr_abortion == 1.5 & rr_preec == 1.0) %>% 
+  describe_cohorts()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.5 & rr_preec == 1.0) %>% 
+  print_analysis_kable()
+
+# Risks
+create_figure(figure_data2, "Risk, Initiators", "1.5", "1")
+create_figure(figure_data2, "Risk, Non-Initiators", "1.5", "1")
+create_figure(figure_data2, "Risk Difference", "1.5", "1")
+create_figure(figure_data2, "Risk Ratio", "1.5", "1")
 
 ```

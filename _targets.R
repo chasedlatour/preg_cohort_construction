@@ -82,7 +82,7 @@ missing_params <- data.frame(
                                           0.20, 0.100, 0)),
   # Cut it down from 5 so not too large
   gamma1 = -0.2,
-  pnc_wk = rep(7, 6)
+  pnc_wk = rep(7)
 )
 
 
