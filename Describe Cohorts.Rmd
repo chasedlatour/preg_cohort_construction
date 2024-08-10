@@ -157,13 +157,14 @@ estimates <- figure_data %>%
 figure_data2 <- left_join(estimates, truths, by = c("rr_abortion", "rr_preec",
                                                     "missing", "parameter"))
 
+
 create_figure <- function(dataset, parameter, rr_abort, rr_preec){
   
   param <- sym(parameter)
   rr_abort <- sym(rr_abort)
   rr_preeclampsia <- sym(rr_preec)
   
-  plot <- figure_data2 %>%
+  plot <- dataset %>%
     filter(rr_abortion == rr_abort & rr_preec == rr_preeclampsia) %>%
     filter(parameter == param) %>% 
     ggplot(aes(x = missing, y = value, color = cohort)) + # , shape = cohort
@@ -198,8 +199,14 @@ analyses2 %>%
   print_analysis_kable()
 
 # Risks
-create_figure(figure_data2, "Risk, Initiators", "0.7", "0.7")
-create_figure(figure_data2, "Risk, Non-Initiators", "0.7", "0.7")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"), 
+              "Risk, Initiators", "0.7", "0.7")
+create_figure(figure_data2%>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+                       "Risk, Non-Initiators", "0.7", "0.7")
 create_figure(figure_data2, "Risk Difference", "0.7", "0.7")
 create_figure(figure_data2, "Risk Ratio", "0.7", "0.7")
 
@@ -219,8 +226,14 @@ analyses2 %>%
   print_analysis_kable()
 
 # Risks
-create_figure(figure_data2, "Risk, Initiators", "1", "0.7")
-create_figure(figure_data2, "Risk, Non-Initiators", "1", "0.7")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Initiators", "1", "0.7")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"), 
+              "Risk, Non-Initiators", "1", "0.7")
 create_figure(figure_data2, "Risk Difference", "1", "0.7")
 create_figure(figure_data2, "Risk Ratio", "1", "0.7")
 
@@ -240,8 +253,14 @@ analyses2 %>%
   print_analysis_kable()
 
 # Risks
-create_figure(figure_data2, "Risk, Initiators", "1.5", "0.7")
-create_figure(figure_data2, "Risk, Non-Initiators", "1.5", "0.7")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Initiators", "1.5", "0.7")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Non-Initiators", "1.5", "0.7")
 create_figure(figure_data2, "Risk Difference", "1.5", "0.7")
 create_figure(figure_data2, "Risk Ratio", "1.5", "0.7")
 
@@ -261,8 +280,14 @@ analyses2 %>%
   print_analysis_kable()
 
 # Risks
-create_figure(figure_data2, "Risk, Initiators", "0.7", "1")
-create_figure(figure_data2, "Risk, Non-Initiators", "0.7", "1")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Initiators", "0.7", "1")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Non-Initiators", "0.7", "1")
 create_figure(figure_data2, "Risk Difference", "0.7", "1")
 create_figure(figure_data2, "Risk Ratio", "0.7", "1")
 
@@ -282,8 +307,14 @@ analyses2 %>%
   print_analysis_kable()
 
 # Risks
-create_figure(figure_data2, "Risk, Initiators", "1", "1")
-create_figure(figure_data2, "Risk, Non-Initiators", "1", "1")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Initiators", "1", "1")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Non-Initiators", "1", "1")
 create_figure(figure_data2, "Risk Difference", "1", "1")
 create_figure(figure_data2, "Risk Ratio", "1", "1")
 
@@ -303,8 +334,14 @@ analyses2 %>%
   print_analysis_kable()
 
 # Risks
-create_figure(figure_data2, "Risk, Initiators", "1.5", "1")
-create_figure(figure_data2, "Risk, Non-Initiators", "1.5", "1")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Initiators", "1.5", "1")
+create_figure(figure_data2 %>% 
+                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
+                         cohort != "Sens: Untrt Pregnancies Outcome"),
+              "Risk, Non-Initiators", "1.5", "1")
 create_figure(figure_data2, "Risk Difference", "1.5", "1")
 create_figure(figure_data2, "Risk Ratio", "1.5", "1")
 
