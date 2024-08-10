@@ -19,7 +19,7 @@ tar_option_set(
   # Packages that your targets need for their tasks.
   packages = c("tibble", "tidyverse", "readxl", "survival", "rlang"),
   seed = 13049857,
-  format = "qs", # Optionally set the default storage format. qs is fast.
+  # format = "qs", # Optionally set the default storage format. qs is fast.
   #
   # Pipelines that take a long time to run may benefit from
   # optional distributed computing. To use this capability
@@ -72,7 +72,7 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       ".xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 40000
+treatment_effects$n = 5000
 
 
 # Create a dataset with the missing data parameters

@@ -60,17 +60,18 @@ Make a function that outputs the analytic results for a DGM
 # First, prepare the dataset
 analyses2 <- analyses %>% 
   mutate(
-    # truth_r0 = map_dbl(potential_risks, ~subset(.x, pnc_wk == "all")$risk0)
     truth = map(potential_risks, ~.x %>% rename_with(~paste0("truth_", .))),
     observed_del = map(observed_deliveries, ~.x %>%  rename_with(~paste0("obs_del_", .))),
     observed_out = map(observed_outcomes, ~.x %>% rename_with(~paste0("obs_out_", .))),
     tte = map(tte, ~.x %>% rename_with(~paste0("all_preg_", .))),
-    tte_all_outc = map(sens_anal_all_outc, ~.x %>% rename_with(~paste0("all_preg_all_outc_", .))),
-    tte_no_outc = map(sens_anal_no_outc, ~.x %>% rename_with(~paste0("all_preg_no_outc_", .)))
+    all_outc = map(sens_anal_all_outc, ~.x %>% rename_with(~paste0("all_preg_all_outc_", .))),
+    trt_outc = map(sens_anal_trt_outc, ~.x %>% rename_with(~paste0("trt_preg_outc_", .))),
+    untrt_outc = map(sens_anal_untrt_out, ~.x %>% rename_with(~paste0("untrt_preg_outc_", .))),
+    no_outc = map(sens_anal_no_outc, ~.x %>% rename_with(~paste0("all_preg_no_outc_", .)))
   ) %>% 
   select(rr_abortion, rr_preec, marginal_p_miss_severity, marginal_p_miss_miscarriage,
-         truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc) %>% 
-  unnest(c(truth, observed_del, observed_out, tte, tte_all_outc, tte_no_outc)) %>% 
+         truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc) %>% 
+  unnest(c(truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc)) %>% 
   # select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
   mutate(
     marginal_p_miss_severity = marginal_p_miss_severity / 1.13,
@@ -83,7 +84,7 @@ print_analysis_kable <- function(data_subset){
   hold <- data_subset %>% 
     mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
-    kbl() %>% # col.names = NA
+    kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
     kable_classic() %>% 
@@ -92,8 +93,8 @@ print_analysis_kable <- function(data_subset){
       "Prob Missing Due to Abortion" = 1,
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
-      "RD" = 1,
-      "RR = 1"),6)
+      "$$RD$$" = 1,
+      "$$RR$$" = 1), 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
@@ -102,6 +103,8 @@ print_analysis_kable <- function(data_subset){
       "Observed Outcomes" = 4,
       "All Pregnancies" = 4,
       "All Pregnancies, Assuming All Censored had Outcome" = 4,
+      "All Pregnancies, Assuming Treated had Outcome" = 4,
+      "All Pregnancies, Assumine Untreated had Outcome" = 4,
       "All Pregnancies, Assuming All Censored did not have Outcome" = 4
     ))
   
@@ -128,8 +131,10 @@ figure_data <- analyses2 %>%
     cohort = case_when(grepl("truth", estimate) ~ "Truth",
                        grepl("obs_del", estimate) ~ "Observed Deliveries",
                        grepl("obs_out", estimate) ~ "Observed Outcomes",
-                       grepl("all_preg_all_outc", estimate) ~ "All Pregnancies: All Outcome",
-                       grepl("all_preg_no_outc", estimate) ~ "All Pregnancies: No Outcome",
+                       grepl("all_preg_all_outc", estimate) ~ "Sens: All Pregnancies Outcome",
+                       grepl("untrt_preg_outc", estimate) ~ "Sens: Untrt Pregnancies Outcome",
+                       grepl("trt_preg_outc", estimate) ~ "Sens: Trt Pregnancies Outcome",
+                       grepl("all_preg_no_outc", estimate) ~ "Sens: All Pregnancies No Outcome",
                        grepl("all_preg", estimate) ~ "All Pregnancies: TTE"),
     parameter = case_when(grepl("_risk0", estimate) ~ "Risk, Non-Initiators",
                           grepl("_risk1", estimate) ~ "Risk, Initiators",
@@ -161,7 +166,7 @@ create_figure <- function(dataset, parameter, rr_abort, rr_preec){
   plot <- figure_data2 %>%
     filter(rr_abortion == rr_abort & rr_preec == rr_preeclampsia) %>%
     filter(parameter == param) %>% 
-    ggplot(aes(x = missing, y = value, color = cohort, shape = cohort)) +
+    ggplot(aes(x = missing, y = value, color = cohort)) + # , shape = cohort
     geom_point(size = 3, position = position_dodge(0.5)) +
     facet_wrap(parameter ~., ncol = 1) +
     geom_hline(aes(yintercept = truth), col = "red", linetype = "dashed") + 

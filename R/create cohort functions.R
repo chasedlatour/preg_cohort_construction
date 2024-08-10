@@ -8,8 +8,7 @@
 #####################################################
 
 # Testing:
-# data <- tar_read(generated_data_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_20000)
-# Issue with createion of: cohort_data_0_0.7_1_.0.2_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_20000
+# tar_data <- tar_read(generated_data_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_10000)
 
 #####################################################
 # FUNCTION: generate_cohort()
@@ -93,15 +92,19 @@ create_cohort <- function(dataset, p_sev_beta,
       ######################################
       ### Untreated Potential Outcomes
       
-      untreated_po = pmap(list(preg_outcomes_untrt, preec_outcomes_untrt,
-                               revised_preg, pnc_wk),
+      untreated_po = pmap(list(preg_outcomes_untrt, 
+                               preec_outcomes_untrt,
+                               revised_preg, 
+                               pnc_wk),
                           untreated_outcomes),
       
       ######################################
       ### Treated Potential Outcomes
       
-      treated_po = pmap(list(preg_outcomes_trt, preec_outcomes_trt, 
-                             revised_preg, pnc_wk),
+      treated_po = pmap(list(preg_outcomes_trt, 
+                             preec_outcomes_trt, 
+                             revised_preg, 
+                             pnc_wk),
                         treated_outcomes), 
       
       ######################################
@@ -109,23 +112,18 @@ create_cohort <- function(dataset, p_sev_beta,
       ### Identify prenatal encounters after
       ### the first.
       
-      pnc_enc_rev = pmap(list(pnc_enc, pnc_wk),
-                         revise_pnc) #,
-      
-      
-      ######################################
-      ### Missing Indicators - COME BACK -- THIS WONT WORK ANYMORE
-      # 
-      # ltfu_sev = first_missing_sev(unlist(missing_by_sev),
-      #                              pnc_wk)
+      pnc_enc_rev = pmap(list(pnc_enc, 
+                              pnc_wk),
+                         revise_pnc) 
       
     ) %>% 
     unnest_wider(c(untreated_po, treated_po)) 
   
-  
-  
-  # Assign the treatment values among those where include ne 0
-  data2 <- assign_trt(subset(data, include == 1)) %>% 
+
+  data2 <- data %>% 
+    filter(include == 1) %>% 
+    # Assign treatment -- Wait until after filter to those who are included in the sample
+    mutate(trt = rbinom(n = length(p_trt), size = 1, prob = p_trt)) %>% 
     # Create variables for the observed outcomes - ignore missingness at this stage
     mutate(
       preeclampsia_pre_miss = ifelse(trt == 0,
@@ -139,22 +137,23 @@ create_cohort <- function(dataset, p_sev_beta,
                                   final_preg1_t)
     ) 
   
+  
   ## Calculate the betas for the missingness due to miscarriage.
-  ## Because this is a single simulation and not a full Monte Carlo simulation, this average 
-  ## is based upon the observed data. In a multi-repetition simulation, we would calculate
-  ## this in a large cohort and use that value.
-  ## Because the seed is maintained and this is only calculated among the non-initiators, this 
-  ## should be the same for all
-  expected_ga_miscarriages <- as.double(subset(data2, trt == 0 & pregout_t_pre_miss < 18) %>% 
-                                          ungroup() %>% 
-                                          summarize(avg = mean(pregout_t_pre_miss)))
-  gamma0 <- -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
-  
-  
-  ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
-  ## This is the vector of beta values
-  p_miss_outcome <- c(gamma0, 
-                      gamma1)
+    ## Because this is a single simulation and not a full Monte Carlo simulation, this average 
+    ## is based upon the observed data. In a multi-repetition simulation, we would calculate
+    ## this in a large cohort and use that value.
+    ## Because the seed is maintained and this is only calculated among the non-initiators, this 
+    ## should be the same for all
+    expected_ga_miscarriages <- as.double(subset(data2, trt == 0 & pregout_t_pre_miss < 18) %>% 
+                                            ungroup() %>% 
+                                            summarize(avg = mean(pregout_t_pre_miss)))
+    # Balancing intercept term
+    gamma0 <- -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
+    
+    ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
+    ## This is the vector of beta values
+    p_miss_outcome <- c(gamma0, 
+                        gamma1)
   
   # Finally, incorporate/create the missing outcomes
   data2b <- data2 %>% 
@@ -170,7 +169,7 @@ create_cohort <- function(dataset, p_sev_beta,
       # Determine if someone was missing due to severity
       missing_by_sev = rbinom(n = length(p_missing_by_sev), size = 1, prob = p_missing_by_sev),
       
-      # Determine when the person was LTFU (e.g., decided not to come back to the data)
+      # Determine when the person was LTFU due to severity
       ltfu_sev = runif(n = length(missing_by_sev), min = pnc_wk, max = pregout_t_pre_miss),
       
       ## Make missing if not actually LTFU due to severity
@@ -179,11 +178,11 @@ create_cohort <- function(dataset, p_sev_beta,
                         NA),
       
       ######################################
-      ## LTFU by Severity
+      ## LTFU by Outcome
       
       # Calculate the probability that missing due to outcome
       p_out_ltfu = ifelse(pregout_pre_miss == 'fetaldeath' & 
-                            pregout_t_pre_miss < 20,
+                            pregout_t_pre_miss < 18, # Abortion definition
                           logodds_to_p(p_miss_outcome[1] + 
                                          (pregout_t_pre_miss * 
                                             p_miss_outcome[2])),
@@ -194,7 +193,7 @@ create_cohort <- function(dataset, p_sev_beta,
       
     )
   
-  # Create a MAR and MNAR scenario
+  # Create the observed outcomes, incorporating missing data
   data3 <- data2b %>% 
     mutate(
       
@@ -203,10 +202,10 @@ create_cohort <- function(dataset, p_sev_beta,
       # -- - ltfu_sev is not missing and less than or equal to pregout_t_pre_miss, OR
       # -- - ltfu_out is equal to 1
       # Create an indicator just for MAR only and MAR+MNAR.
-      ltfu_mar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
+      ltfu_mar = ifelse(!is.na(ltfu_sev), # & ltfu_sev <= pregout_t_pre_miss -- Definitionally yes
                         "sev",
                         "not"),
-      ltfu_mar_mnar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
+      ltfu_mar_mnar = ifelse(!is.na(ltfu_sev), # & ltfu_sev <= pregout_t_pre_miss
                              "sev",
                              ifelse(ltfu_out == 1,
                                     "out",
@@ -218,6 +217,7 @@ create_cohort <- function(dataset, p_sev_beta,
                                 41,
                                 ltfu_sev), # Just set as a constant-ignoring missing due to outcome
                            pnc_miss),
+      
       t_ltfu_mar_mnar = pmap_dbl(list(pnc_enc_rev,
                                       ltfu_mar_mnar,
                                       pregout_t_pre_miss,
@@ -226,24 +226,30 @@ create_cohort <- function(dataset, p_sev_beta,
       
     ) %>%
     # Finally, create their observed outcomes, incorporating the LTFU
-    mutate(preeclampsia_mar = ifelse(ltfu_mar != 'not',
+    mutate(
+      
+      ## Only missing by severity
+      preeclampsia_mar = ifelse(ltfu_mar != 'not',
+                                0,
+                                preeclampsia_pre_miss),
+      pregout_mar = ifelse(ltfu_mar != 'not',
+                           'unknown',
+                           pregout_pre_miss),
+      pregout_t_mar = ifelse(ltfu_mar != 'not',
+                             t_ltfu_mar,
+                             pregout_t_pre_miss),
+      
+      ## Missing by severity and outcome
+      preeclampsia_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
                                      0,
                                      preeclampsia_pre_miss),
-           pregout_mar = ifelse(ltfu_mar != 'not',
+      pregout_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
                                 'unknown',
                                 pregout_pre_miss),
-           pregout_t_mar = ifelse(ltfu_mar != 'not',
-                                  t_ltfu_mar,
-                                  pregout_t_pre_miss),
-           preeclampsia_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
-                                          0,
-                                          preeclampsia_pre_miss),
-           pregout_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
-                                     'unknown',
-                                     pregout_pre_miss),
-           pregout_t_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
-                                       t_ltfu_mar_mnar,
-                                       pregout_t_pre_miss))
+      pregout_t_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
+                                  t_ltfu_mar_mnar,
+                                  pregout_t_pre_miss)
+    )
  
   return(data3)
   
@@ -254,21 +260,6 @@ create_cohort <- function(dataset, p_sev_beta,
 
 
 
-### FUNCTION: logodds_to_p()
-# This function converts the log-odds into a
-# probability. Important for deriving probabilities
-# from the logit function.
-# INPUT:
-# - logodds = log-odds value that needs to be 
-#   converted to a probability
-
-logodds_to_p <- function(logodds){
-  
-  p <- exp(logodds)/(1 + exp(logodds))
-  
-  return(p)
-  
-}
 
 
 
@@ -276,12 +267,15 @@ logodds_to_p <- function(logodds){
 
 
 
-### FUNCTION: find_first_not_contpreg()
+#####################################################
+# FUNCTION: find_first_not_contpreg()
 # Find the first element of a preg outcomes list that 
 # is not continuing pregnancy.
+#####################################################
+
 find_first_not_contpreg <- function(vec) {
   idx <- which(vec != "contpreg_next")
-  if (length(idx) == 0) {
+  if (length(idx) == 0) { # This should never occur, a check
     return(NA)
   } else {
     return(idx[1])
@@ -291,13 +285,17 @@ find_first_not_contpreg <- function(vec) {
 
 
 
-### FUNCTION: find_first_preeclampsia()
+
+#####################################################
+# FUNCTION: find_first_preeclampsia()
 # Find the first element of a preg outcomes list that 
 # is preeclampsia
+#####################################################
+
 find_first_preeclampsia <- function(vec) {
   idx <- which(vec == 1)
   if (length(idx) == 0) {
-    return(NA)
+    return(NA) # This might occur if they don't develop preeclampsia ever
   } else {
     return(idx[1])
   }
@@ -306,18 +304,32 @@ find_first_preeclampsia <- function(vec) {
 
 
 
+
+
+#####################################################
 #### FUNCTION: untreated_outcomes()
-# This function the untreated
+# This function identified the untreated
 # potential outcomes
+# INPUTS:
+# - preg_outcomes - the list of pregnancy outcomes
+#   for a person
+# - preeclampsia_outcomes - the list of preeclampsia
+#   outcomes for a person
+# - revised_outcomes - the list of pregnancy outcomes
+#   if the person were to develop preeclampsia
+# - pnc_wk - the week of the person's initial 
+#   prenatal care encounter
+#####################################################
+
 untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outcomes, pnc_wk){
   
-  ## Find the first pregnancy outcome
+  ## Find the first pregnancy outcome that is not continuing pregnancy
   # Gestational week that the outcome occurred (i.e., 1 + selected week)
   # Don't need to add 1 because Excel indexes from gest week 0 and R from 1
-  first_preg_t = find_first_not_contpreg(unlist(preg_outcomes)) #+ 1
+  first_preg_t = find_first_not_contpreg(unlist(preg_outcomes))
   
   ## Determine if the person developed preeclampsia if untreated
-  first_preec_t = find_first_preeclampsia(unlist(preeclampsia_outcomes)) # + 1
+  first_preec_t = find_first_preeclampsia(unlist(preeclampsia_outcomes))
   
   ## A person only actually develops preeclampsia if it occurs prior
   ## to or the same week as the untreated pregnancy outcome.
@@ -326,17 +338,18 @@ untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_out
                         as.numeric(first_preec_t <= first_preg_t))
   
   ## Now, get the revised outcome based upon their preeclampsia value
-  # Gestational week that the outcome occurs
-  final_preg_t = ifelse(preeclampsia == 0, # If no preeclampsia
-                        first_preg_t, # Then potential outcome
-                        first_preec_t) # Else preeclampsia timing
   
-  # Get the actual outcome value
-  final_preg = ifelse(preeclampsia == 0,
-                      unlist(preg_outcomes)[final_preg_t], 
-                      unlist(revised_outcomes)[final_preg_t]) 
-  
-  final_preg = gsub("_next", "", final_preg)
+    # Determine the gestational week that the outcome occurs
+    final_preg_t = ifelse(preeclampsia == 0, # If no preeclampsia
+                          first_preg_t, # Then potential outcome
+                          first_preec_t) # Else preeclampsia timing
+    
+    # Get the actual outcome value
+    final_preg = ifelse(preeclampsia == 0,
+                        unlist(preg_outcomes)[final_preg_t], 
+                        unlist(revised_outcomes)[final_preg_t]) 
+    
+    final_preg = gsub("_next", "", final_preg)
   
   
   # Determine if the person would be indexed into the cohort at 4, 7, 
@@ -365,26 +378,25 @@ untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_out
 
 
 
-
+#######################################################
 ### FUNCTION: find_first_not_contpreg_wk()
 # Find the first element of a preg outcomes list that 
 # is not continuing pregnancy.
 # However, only return those after the treated week
+# INPUTS:
+# - vec: The vector of pregnancy outcomes
+# - wk: Week of the initial prenatal encounter
+#######################################################
+
 find_first_not_contpreg_wk <- function(vec, wk) {
+  
   idx <- which(vec != "contpreg_next")
   
-  # First index of the first value greater than wk
-  # This is indexed at a prenatal care visit at gestational week wk
-  # which is indexed by R as wk+1.
-  # We want to identify the first outcome that occurs after the first
-  # prenatal care encounter at gestational week wk or R index wk+1.
-  # Outcomes are determined the week prior to when they occur. Thus,
-  # we want the first outcome where it is determined at or after the 
-  # prenatal care visit (week+1). Thus, it needs to be greater than wk
-  index_greater_than_wk <- which(idx > wk)[1] 
+  # First index of the not continuing preg weeks that is greater than wk
+  index_greater_than_wk <- which(idx > wk)[1]
   
   if (length(index_greater_than_wk) == 0) {
-    return(NA)
+    return(NA) # This should not occur for pregnancy outcomes, a check.
   } else {
     return(idx[index_greater_than_wk])
   }
@@ -392,20 +404,35 @@ find_first_not_contpreg_wk <- function(vec, wk) {
 
 
 
-#### FUNCTION: treated_outcomes()
+
+
+
+#######################################################
+# FUNCTION: treated_outcomes()
 # This function identifies the treated
 # potential outcomes
+#
+# INPUTS:
+# - preg_outcomes: vector with the pregnancy outcomes
+#   at each gestational week
+# - preeclampsia_outcomes: vector with the preeclampsia
+#   outcomes at each gestational week
+# - revised_outcomes: vector with the pregnancy outcomes
+#   post-preeclampsia at each gestational week
+# - wk: week of the initial prenatal care visit
+#######################################################
+
 treated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outcomes, wk){
   
   ## Determine if the person developed preeclampsia if treated
   first_preec_t = find_first_preeclampsia(unlist(preeclampsia_outcomes))
-  # Note: Preeclampsia cannot develop until after the prenatal timings of interest
   
   ## Find the first pregnancy outcome that occurred after the indexing
-  ## prenatal encounter -- Only way that we will see these outcomes
+  ## prenatal encounter -- Only see these outcomes after someone received
+  ## trt at first PNC encounter
   first_preg_t = find_first_not_contpreg_wk(unlist(preg_outcomes), wk) 
   
-  ## A person only actually develops preeclampsia if it occurs prior
+  ## Create preeclampsia indicator: Must occur prior
   ## to or the same week as the treated pregnancy outcome.
   preeclampsia = ifelse(is.na(first_preec_t),
                         0,
@@ -436,34 +463,40 @@ treated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outco
 
 
 
-#### FUNCTION: revise_pnc()
-# Revise the occurrence of prenatal care
-# encounters depending upon their gestational
-# week of indexing (i.e., their first prenatal
-# care encounter)
+
+
+
+
+
+
+###################################################
+# FUNCTION: revise_pnc()
+# Revise prenatal care encounters so that they 
+# only occur on and after the first PNC encounter
+#
 # INPUTs:
 # - pnc_encounters - vector of the prenatal care
 #   encounter indicators
-# - wk - week of the indexing prenatal care encounter
+# - wk - week of the first prenatal care encounter
+###################################################
 
 revise_pnc <- function(pnc_encounters, wk){
   
   n <- length(unlist(pnc_encounters))
   
   # No prenatal encounters prior to indexing prenatal encounter
-  pre_week <- rep(0, wk) # Changed wk-1 to wk because starts at 0
-  
+  pre_week <- rep(0, wk) # wk instead of wk-1 because pnc encs start at 0
   
   # Prenatal encounter on indexing prenatal encounter week
-  #week <- 1
+  week <- 1
   
   # Prenatal encounters after the indexing prenatal encounter
-  wk_plus <- unlist(pnc_encounters)[(wk+1):n] 
+  wk_plus <- unlist(pnc_encounters)[(wk+2):n] 
   
   # Return the final list of prenatal encounters
   list(
     c(pre_week,
-      #week, 
+      week, 
       wk_plus)
     )
   
@@ -474,54 +507,26 @@ revise_pnc <- function(pnc_encounters, wk){
 
 
 
-##### FUNCTION assign_trt()
-# This function assigns a treatment value
-# to each person in a cohort dependent upon their 
-# severity values.
-# This is done within each cohort to only assign
-# treatment to those that make it into the 
-# study, as would be done in a real study.
-# This also maintains statistical balance.
-
-assign_trt <- function(dataset){
-  
-  # Pull out the p_trt vector
-  p_trt <- dataset$p_trt
-  # p_trt <- data$p_trt
-  
-  # Generate treatments
-  trt <- rbinom(n = length(p_trt),
-                size = 1,
-                prob = p_trt)
-  
-  dataset$trt <- trt
-  
-  return(dataset)
-  
-}
 
 
 
-
-
-
+###################################################
 ### FUNCTION: pnc_miss()
 # This function takes a vector of PNC encounters 
 # and the ltfu indicator and determines the timing
 # of the most recent PNC.
 # Someone will be LTFU at their last PNC encounter
 # PRIOR to that indicator.
+###################################################
+
+
 pnc_miss <- function(pnc_enc, ltfu_ind, t_preg_out, t_sev){
   
   # Unlist for easy usage
   pnc_enc <- unlist(pnc_enc)
   
   # Identify the gw of PNC encounters
-  # Need to subtract 1 because LTFU due to sev and 
-  # LTFU due to outcome are occurring the week after
-  # they are determined.
-  # However, we want the last PNC BEFORE that visit.
-  # Thus, need to subtract 1.
+  # Subtract 1 because pnc enc indexed from week 0
   which1 <- which(pnc_enc == 1) - 1
   
   if(ltfu_ind == "out"){
@@ -540,10 +545,17 @@ pnc_miss <- function(pnc_enc, ltfu_ind, t_preg_out, t_sev){
 
 
 
+
+
+
+
+#####################################################
 ### FUNCTION: logodds_to_p()
 # This function converts the log-odds into a
 # probability. Important for deriving probabilities
 # from the logit function.
+#####################################################
+
 logodds_to_p <- function(logodds){
   
   p <- exp(logodds)/(1 + exp(logodds))
@@ -551,5 +563,3 @@ logodds_to_p <- function(logodds){
   return(p)
   
 }
-
-

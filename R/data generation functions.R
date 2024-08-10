@@ -69,13 +69,12 @@ generate_dgm <- function(n_sim, n, param_file,
 
 
 
-
+###################################################################################
 #### FUNCTION: generate()
-# This is the baseline function that will be 
-# -- used to generate the potential outcomes
+# This is the baseline function that will be used to generate the potential outcomes
 # -- for each cohort.
 
-# Inputs:
+# Inputs: (most saved in params_list_gen in the step before.)
 # n_sim = simulation number (id)
 # n = number of individuals in a cohort/repetition
 # p_sev_dist = vector of patient distribution by disease severity
@@ -87,6 +86,7 @@ generate_dgm <- function(n_sim, n, param_file,
 # potential_preec_trt = same but treated potential preeclampsia outcomes
 # revised_preg = dataset with the weekly probabilities for pregnancy outcomes after preeclampsia
 # pnc_prob = dataset with the weekly probabilities for a prenatal encounter
+###################################################################################
 
 generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
                      potential_preg_untrt, potential_preg_trt, 
@@ -104,7 +104,7 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
   # Create the dataset that going to output
   data <- dplyr::tibble(
     
-    # Simulation ID -- Only important if we simulate more than one simulation cohort
+    # Simulation ID -- Only important if we simulate more than one simulation cohort. Retaining in case we do
     sim_id = n_sim, 
     
     # Each individual's ID
@@ -152,7 +152,7 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     
     ##### GENERATE PNC ENCOUNTERS -- Step 7
     
-    # Determine gestational week of indexing prenatal encounter
+    # Determine gestational week of indexing prenatal encounter - NO LONGER USING THIS APPROACH
     # pnc_wk = sample(x = c(4, 7, 16), size = n, prob = p_indx_pnc, replace = TRUE),
     
     # List of indicator variables for PNC encounters
@@ -160,16 +160,6 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     pnc_enc = purrr::map(severity, ~sample_pnc(pnc_prob, .x))
     
   )
-  
-  # Final random state
-  # finish_seed <- list(.Random.seed)
-  
-  # ## Store the random states in the final dataset.
-  # data <- data %>% 
-  #   mutate(
-  #     start_seed = initial_seed,
-  #     end_seed = finish_seed
-  #   )
   
   return(data)
   
@@ -179,7 +169,7 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
 
 
       
-
+###################################################################################
 ### FUNCTION: sample_outcomes_for_id()
 # This function will create the potential pregnancy outcomes based upon 
 # the probabilities recorded in the Excel file.
@@ -188,27 +178,46 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
 # Inputs:
 # - data = dataset with the weekly probabilities for potential pregnancy outcomes
 # - sev = severity value for that person
+###################################################################################
+
 sample_outcomes_for_id <- function(data, sev) {
   
-  # Subset to the severity level of interest
+  
   data2 <- subset(data, severity == sev)
-
-  # Apply this function to each row of probability dataset
-  outcomes <- sapply(1:nrow(data2), function(i) {
-
-    # Indicate the potential options to select from
-    options <- c("fetaldeath_next", "livebirth_next", "contpreg_next")
-
-    # Assign the probabilities to each of the potential pregnancy outcome options based upon
-    # -- the corresponding rows in the probability dataset
-    probabilities <- data2[i, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
-
-    # Sample an option based on probabilities
-    sampled_option <- sample(options, size = 1, prob = probabilities)
-
-    # Return that sampled option. This will be stored in the vector outcomes
-    return(sampled_option)
+  
+  # Define the potential options to select from
+  options <- c("fetaldeath_next", "livebirth_next", "contpreg_next")
+  
+  # Extract the matrix of probabilities
+  probabilities <- data2[, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
+  
+  # Apply the sampling function to each row of probabilities using apply
+  outcomes <- apply(probabilities, 1, function(prob) {
+    
+    sample(options, size = 1, prob = prob)
+    
   })
+  
+  # OLD:
+  # # Subset to the severity level of interest
+  # data2 <- subset(data, severity == sev) 
+  # 
+  # # Apply this function to each row of probability dataset
+  # outcomes <- sapply(1:nrow(data2), function(i) {
+  # 
+  #   # Indicate the potential options to select from
+  #   options <- c("fetaldeath_next", "livebirth_next", "contpreg_next")
+  # 
+  #   # Assign the probabilities to each of the potential pregnancy outcome options based upon
+  #   # -- the corresponding rows in the probability dataset
+  #   probabilities <- data2[i, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
+  # 
+  #   # Sample an option based on probabilities
+  #   sampled_option <- sample(options, size = 1, prob = probabilities)
+  # 
+  #   # Return that sampled option. This will be stored in the vector outcomes
+  #   return(sampled_option)
+  # })
 
   return(list(outcomes))
 }
@@ -219,6 +228,10 @@ sample_outcomes_for_id <- function(data, sev) {
 
 
 
+
+
+
+###################################################################################
 ### FUNCTION sample_preeclampsia()
 # This function will create potential preeclampsia outcomes 
 # This will output a list of the potential preeclampsia
@@ -227,6 +240,7 @@ sample_outcomes_for_id <- function(data, sev) {
 # INPUT:
 # - data = dataset with the weekly potential preeclampsia probabilities
 # - sev = severity value for that person
+###################################################################################
 
 sample_preeclampsia <- function(data, sev) {
   
@@ -247,16 +261,20 @@ sample_preeclampsia <- function(data, sev) {
 
 
 
-
+###################################################################################
 #### FUNCTION: process_out()
 # This function takes in the vector out from 
 # sample_revised_preg() -- below -- and replaces its values
 # with those that are compatible with the other vectors.
+# Further, those where the probability of a revised pregnancy outcome was 0
+# are replaced with NA.
 #
 # INPUT:
 # - out = vector from sample_revised_preg
+###################################################################################
 
 process_out <- function(out, n_NA) {
+  
   # Create an empty vector of characters with the same length as 'probabilities'
   results <- vector("character", length(out))
   
@@ -278,10 +296,19 @@ process_out <- function(out, n_NA) {
 
 
 
+
+
+
+
+
+
+###################################################################################
 ### FUNCTION sample_revised_preg()
 # This function will provide revised pregnancy
 # outcomes for the cases in which a pregnancy
 # ends in preeclampsia.
+###################################################################################
+
 sample_revised_preg <- function(data, sev){
   
   # Subset to the severity level of interest 
@@ -295,8 +322,8 @@ sample_revised_preg <- function(data, sev){
   out <- rbinom(n = length(probabilities), 
                 size=1,
                 prob = probabilities)
-  # out is a numeric vector - we want a character vector with the
-  # same values as the others
+  # out is a numeric vector - we want a character vector with NA
+  # for those values where prob was 0
   
   # Revised here using above step.
   rev_out <- process_out(out, n_NA)
@@ -304,6 +331,7 @@ sample_revised_preg <- function(data, sev){
   return(list(rev_out))
   
 }
+
 
 
 
