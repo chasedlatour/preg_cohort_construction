@@ -20,18 +20,10 @@ tar_option_set(
   packages = c("tibble", "tidyverse", "readxl", "survival", "rlang"),
   seed = 13049857,
   # format = "qs", # Optionally set the default storage format. qs is fast.
-  #
-  # Pipelines that take a long time to run may benefit from
-  # optional distributed computing. To use this capability
-  # in tar_make(), supply a {crew} controller
-  # as discussed at https://books.ropensci.org/targets/crew.html.
-  # Choose a controller that suits your needs. For example, the following
-  # sets a controller that scales up to a maximum of two workers
-  # which run as local R processes. Each worker launches when there is work
-  # to do and exits if 60 seconds pass with no tasks to run.
-  #
-  controller = crew::crew_controller_local(workers = 4),
-  memory = "transient",
+  controller = crew::crew_controller_local(workers = 2),
+  # memory = "transient",
+  storage = "worker",
+  retrieval = "worker",
   garbage_collection = TRUE
 )
 
