@@ -298,9 +298,9 @@ sample_revised_preg <- function(data, sev){
   n_NA <- length(probabilities[probabilities == 0])
   
   # Use these probabilities with a bernoulli/binomial rv
-  out <- rbinom(n = length(probabilities), 
+  out <- c(rep(0, n_NA), rbinom(n = length(probabilities) - n_NA, 
                 size=1,
-                prob = probabilities)
+                prob = probabilities))
   # out is a numeric vector - we want a character vector with NA
   # for those values where prob was 0
   
