@@ -141,7 +141,7 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     ##### GENERATE POTENTIAL PREECLAMPSIA OUTCOMES
     
     ## Step 4: Untreated
-    preec_outcomes_untrt = purrr::map(severity, ~sample_preeclampsia(potential_preec_untrt, .x)),
+    preec_outcomes_untrt = purrr::map(severity, ~sample_preeclampsia(potential_preec_untrt, .x)), 
     
     ## Step 5: Treated
     preec_outcomes_trt = purrr::map(severity, ~sample_preeclampsia(potential_preec_trt, .x)),
@@ -197,27 +197,6 @@ sample_outcomes_for_id <- function(data, sev) {
     sample(options, size = 1, prob = prob)
     
   })
-  
-  # OLD:
-  # # Subset to the severity level of interest
-  # data2 <- subset(data, severity == sev) 
-  # 
-  # # Apply this function to each row of probability dataset
-  # outcomes <- sapply(1:nrow(data2), function(i) {
-  # 
-  #   # Indicate the potential options to select from
-  #   options <- c("fetaldeath_next", "livebirth_next", "contpreg_next")
-  # 
-  #   # Assign the probabilities to each of the potential pregnancy outcome options based upon
-  #   # -- the corresponding rows in the probability dataset
-  #   probabilities <- data2[i, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
-  # 
-  #   # Sample an option based on probabilities
-  #   sampled_option <- sample(options, size = 1, prob = probabilities)
-  # 
-  #   # Return that sampled option. This will be stored in the vector outcomes
-  #   return(sampled_option)
-  # })
 
   return(list(outcomes))
 }
