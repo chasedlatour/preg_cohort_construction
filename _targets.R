@@ -35,8 +35,8 @@ tar_source()
 
 # Create the data generation parameters
 treatment_effects <- expand.grid(
-  rr_abortion = c(0.7), #, 1, 1.5),# c(0.8), #
-  rr_preec = c(0.7) #, 1) #c(0.8) #
+  rr_abortion = c(0.7, 1, 1.5),# c(0.8), #
+  rr_preec = c(0.7, 1) #c(0.8) #
 ) 
 treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_abortion)), 
