@@ -26,16 +26,16 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
   ## P(Trt|Severity) : 0.4, 0.5, 0.6
   ## Expected distribution of severity among untreated: 4/15 = low, 5/15 = med, 6/15 = high
   ## Manually calculated based upon the values above.
-  expected_sev <- (4/15*0) + (5/15*1) + (6/15*2)
+  expected_sev = (4/15*0) + (5/15*1) + (6/15*2)
   
   ## Balancing intercept for model
-  b0_sev <- -log((1/marginal_p_miss_severity)-1) - (beta12 * expected_sev)
+  b0_sev = -log((1/marginal_p_miss_severity)-1) - (beta12 * expected_sev)
   
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
   p_sev_beta = c(b0_sev, beta12, 2*beta12)
   
-  hold <- create_cohort(data, p_sev_beta, marginal_p_miss_miscarriage, 
-                        gamma1, pnc_wk)
+  hold = create_cohort(data, p_sev_beta, marginal_p_miss_miscarriage, 
+                       gamma1, pnc_wk)
   
   # ## Split the data by sim_id to maintain balance within the datasets
   # split_data <- split(data, data$sim_id)
@@ -52,7 +52,7 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
   # ) %>% bind_rows()
   
   return(hold)
-
+  
 }
 
 
@@ -84,12 +84,12 @@ create_cohort <- function(dataset, p_sev_beta,
   
   # Get the probabilities associated with the betas for each
   # severity level - calculated via logistic regression
-  p_missing_sev <- c(logodds_to_p(p_sev_beta[1]),
-                     logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
-                     logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
+  p_missing_sev = c(logodds_to_p(p_sev_beta[1]),
+                    logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
+                    logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
   
   # Create all the potential outcomes and revise the prenatal care encounters
-  data <- dataset %>% # all_outcomes %>%#  
+  data = dataset %>% # all_outcomes %>%#  
     dplyr::mutate(
       
       ######################################
@@ -120,10 +120,7 @@ create_cohort <- function(dataset, p_sev_beta,
                          revise_pnc) 
       
     ) %>% 
-    unnest_wider(c(untreated_po, treated_po)) 
-  
-
-  data2 <- data %>% 
+    unnest_wider(c(untreated_po, treated_po)) %>% 
     filter(include == 1) %>% 
     # Assign treatment -- Wait until after filter to those who are included in the sample
     mutate(trt = rbinom(n = length(p_trt), size = 1, prob = p_trt)) %>% 
@@ -142,24 +139,24 @@ create_cohort <- function(dataset, p_sev_beta,
   
   
   ## Calculate the betas for the missingness due to miscarriage.
-    ## Because this is a single simulation and not a full Monte Carlo simulation, this average 
-    ## is based upon the observed data. In a multi-repetition simulation, we would calculate
-    ## this in a large cohort and use that value.
-    ## Because the seed is maintained and this is only calculated among the non-initiators, this 
-    ## should be the same for all
-    expected_ga_miscarriages <- as.double(subset(data2, trt == 0 & pregout_t_pre_miss < 18) %>% 
-                                            ungroup() %>% 
-                                            summarize(avg = mean(pregout_t_pre_miss)))
-    # Balancing intercept term
-    gamma0 <- -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
-    
-    ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
-    ## This is the vector of beta values
-    p_miss_outcome <- c(gamma0, 
-                        gamma1)
+  ## Because this is a single simulation and not a full Monte Carlo simulation, this average 
+  ## is based upon the observed data. In a multi-repetition simulation, we would calculate
+  ## this in a large cohort and use that value.
+  ## Because the seed is maintained and this is only calculated among the non-initiators, this 
+  ## should be the same for all
+  expected_ga_miscarriages = as.double(subset(data, trt == 0 & pregout_t_pre_miss < 18) %>% 
+                                         ungroup() %>% 
+                                         summarize(avg = mean(pregout_t_pre_miss)))
+  # Balancing intercept term
+  gamma0 = -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
+  
+  ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
+  ## This is the vector of beta values
+  p_miss_outcome = c(gamma0, 
+                     gamma1)
   
   # Finally, incorporate/create the missing outcomes
-  data2b <- data2 %>% 
+  data2b = data %>% 
     # Now determine if missing outcome based upon outcome and gw of outcome
     mutate(
       
@@ -194,10 +191,8 @@ create_cohort <- function(dataset, p_sev_beta,
       # Determine if they were LTFU due to the true pregnancy outcome
       ltfu_out = rbinom(n = length(p_out_ltfu), size = 1, prob = p_out_ltfu)
       
-    )
-  
-  # Create the observed outcomes, incorporating missing data
-  data3 <- data2b %>% 
+    ) %>% 
+    # Create the observed outcomes, incorporating missing data
     mutate(
       
       ## Create an indicator variable for if the person was LTFU and how
@@ -216,10 +211,10 @@ create_cohort <- function(dataset, p_sev_beta,
       
       # Now determine timing when LTFU
       t_ltfu_mar = pmap_dbl(list(pnc_enc_rev,
-                                ltfu_mar,
-                                41,
-                                ltfu_sev), # Just set as a constant-ignoring missing due to outcome
-                           pnc_miss),
+                                 ltfu_mar,
+                                 41,
+                                 ltfu_sev), # Just set as a constant-ignoring missing due to outcome
+                            pnc_miss),
       
       t_ltfu_mar_mnar = pmap_dbl(list(pnc_enc_rev,
                                       ltfu_mar_mnar,
@@ -253,8 +248,8 @@ create_cohort <- function(dataset, p_sev_beta,
                                   t_ltfu_mar_mnar,
                                   pregout_t_pre_miss)
     )
- 
-  return(data3)
+  
+  return(data2b)
   
 }
 
@@ -277,7 +272,7 @@ create_cohort <- function(dataset, p_sev_beta,
 #####################################################
 
 find_first_not_contpreg <- function(vec) {
-  idx <- which(vec != "contpreg_next")
+  idx = which(vec != "contpreg_next")
   if (length(idx) == 0) { # This should never occur, a check
     return(NA)
   } else {
@@ -296,7 +291,7 @@ find_first_not_contpreg <- function(vec) {
 #####################################################
 
 find_first_preeclampsia <- function(vec) {
-  idx <- which(vec == 1)
+  idx = which(vec == 1)
   if (length(idx) == 0) {
     return(NA) # This might occur if they don't develop preeclampsia ever
   } else {
@@ -342,17 +337,17 @@ untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_out
   
   ## Now, get the revised outcome based upon their preeclampsia value
   
-    # Determine the gestational week that the outcome occurs
-    final_preg_t = ifelse(preeclampsia == 0, # If no preeclampsia
-                          first_preg_t, # Then potential outcome
-                          first_preec_t) # Else preeclampsia timing
-    
-    # Get the actual outcome value
-    final_preg = ifelse(preeclampsia == 0,
-                        unlist(preg_outcomes)[final_preg_t], 
-                        unlist(revised_outcomes)[final_preg_t]) 
-    
-    final_preg = gsub("_next", "", final_preg)
+  # Determine the gestational week that the outcome occurs
+  final_preg_t = ifelse(preeclampsia == 0, # If no preeclampsia
+                        first_preg_t, # Then potential outcome
+                        first_preec_t) # Else preeclampsia timing
+  
+  # Get the actual outcome value
+  final_preg = ifelse(preeclampsia == 0,
+                      unlist(preg_outcomes)[final_preg_t], 
+                      unlist(revised_outcomes)[final_preg_t]) 
+  
+  final_preg = gsub("_next", "", final_preg)
   
   
   # Determine if the person would be indexed into the cohort at 4, 7, 
@@ -393,10 +388,10 @@ untreated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_out
 
 find_first_not_contpreg_wk <- function(vec, wk) {
   
-  idx <- which(vec != "contpreg_next")
+  idx = which(vec != "contpreg_next")
   
   # First index of the not continuing preg weeks that is greater than wk
-  index_greater_than_wk <- which(idx > wk)[1]
+  index_greater_than_wk = which(idx > wk)[1]
   
   if (length(index_greater_than_wk) == 0) {
     return(NA) # This should not occur for pregnancy outcomes, a check.
@@ -485,23 +480,23 @@ treated_outcomes <- function(preg_outcomes, preeclampsia_outcomes, revised_outco
 
 revise_pnc <- function(pnc_encounters, wk){
   
-  n <- length(unlist(pnc_encounters))
+  n = length(unlist(pnc_encounters))
   
   # No prenatal encounters prior to indexing prenatal encounter
-  pre_week <- rep(0, wk) # wk instead of wk-1 because pnc encs start at 0
+  pre_week = rep(0, wk) # wk instead of wk-1 because pnc encs start at 0
   
   # Prenatal encounter on indexing prenatal encounter week
-  week <- 1
+  week = 1
   
   # Prenatal encounters after the indexing prenatal encounter
-  wk_plus <- unlist(pnc_encounters)[(wk+2):n] 
+  wk_plus = unlist(pnc_encounters)[(wk+2):n] 
   
   # Return the final list of prenatal encounters
   list(
     c(pre_week,
       week, 
       wk_plus)
-    )
+  )
   
 }
 
@@ -526,20 +521,20 @@ revise_pnc <- function(pnc_encounters, wk){
 pnc_miss <- function(pnc_enc, ltfu_ind, t_preg_out, t_sev){
   
   # Unlist for easy usage
-  pnc_enc <- unlist(pnc_enc)
+  pnc_enc = unlist(pnc_enc)
   
   # Identify the gw of PNC encounters
   # Subtract 1 because pnc enc indexed from week 0
-  which1 <- which(pnc_enc == 1) - 1
+  which1 = which(pnc_enc == 1) - 1
   
   if(ltfu_ind == "out"){
-    subset <- which1[which1 < t_preg_out]
-    last_pnc <- last(subset)
+    subset = which1[which1 < t_preg_out]
+    last_pnc = last(subset)
   } else if (ltfu_ind == "sev"){
-    subset <- which1[which1 < t_sev]
-    last_pnc <- last(subset)
+    subset = which1[which1 < t_sev]
+    last_pnc = last(subset)
   } else {
-    last_pnc <- NA
+    last_pnc = NA
   }
   
   return(last_pnc)
