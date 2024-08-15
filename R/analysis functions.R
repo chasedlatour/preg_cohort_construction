@@ -22,9 +22,8 @@ run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
                          beta12, marginal_p_miss_miscarriage, gamma1,
                          pnc_wk){
   
-  hold <- prep_data_for_analysis(data, pnc_wk)
-  
-  hold2 <- conduct_analysis(hold) %>% 
+  hold <- prep_data_for_analysis(data, pnc_wk) %>% 
+    conduct_analysis() %>% 
     mutate(
       rr_abortion = rr_abortion,
       rr_preec = rr_preec,
@@ -35,7 +34,7 @@ run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
       pnc_wk = pnc_wk
     )
   
-  return(hold2)
+  return(hold)
   
 }
 
