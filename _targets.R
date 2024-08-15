@@ -20,10 +20,10 @@ tar_option_set(
   packages = c("tibble", "tidyverse", "readxl", "survival", "rlang"),
   seed = 13049857,
   # format = "qs", # Optionally set the default storage format. qs is fast.
-  controller = crew::crew_controller_local(workers = 2, seconds_idle = 3),
+  # controller = crew::crew_controller_local(workers = 2, seconds_idle = 3),
   # memory = "transient",
-  storage = "worker",
-  retrieval = "worker",
+  # storage = "worker",
+  # retrieval = "worker",
   garbage_collection = TRUE
 )
 
