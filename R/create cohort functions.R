@@ -34,19 +34,22 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
   p_sev_beta = c(b0_sev, beta12, 2*beta12)
   
-  ## Split the data by sim_id to maintain balance within the datasets
-  split_data <- split(data, data$sim_id)
+  hold <- create_cohort(data, p_sev_beta, marginal_p_miss_miscarriage, 
+                        gamma1, pnc_wk)
   
-  ## Select the observed cohort
-  hold <- mapply(
-    create_cohort,
-    split_data, 
-    MoreArgs = list(p_sev_beta = p_sev_beta,
-                    marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-                    gamma1 = gamma1, 
-                    pnc_wk = pnc_wk),
-    SIMPLIFY = FALSE
-  ) %>% bind_rows()
+  # ## Split the data by sim_id to maintain balance within the datasets
+  # split_data <- split(data, data$sim_id)
+  # 
+  # ## Select the observed cohort
+  # hold <- mapply(
+  #   create_cohort,
+  #   split_data, 
+  #   MoreArgs = list(p_sev_beta = p_sev_beta,
+  #                   marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+  #                   gamma1 = gamma1, 
+  #                   pnc_wk = pnc_wk),
+  #   SIMPLIFY = FALSE
+  # ) %>% bind_rows()
   
   return(hold)
 
