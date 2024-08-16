@@ -154,9 +154,7 @@ conduct_analysis <- function(data){
   # Time-to-event analyses
     
     tte_mar_mnar <- calculate_aj_risks(data, 
-                                       sev_dist, 
-                                       final_pregout_mar_mnar,
-                                       final_pregout_marmnar_tte)
+                                       sev_dist)
     
   # Sensitivity analyses
     
@@ -317,14 +315,7 @@ calculate_risks <- function(dataset, sev_dist, risk_var){
 # average treatment effect (ATE).
 ##############################################
 
-aj_estimator <- function(data_subset, outcome_ind, time_var) {
-  
-  outcome_ind <- enquo(outcome_ind)
-  time_var <- enquo(time_var)
-  
-  # Convert outcome to factor
-  data_subset <- data_subset %>% 
-    mutate(outcome = as.factor(!!outcome_ind))
+aj_estimator <- function(data_subset) { #outcome_ind, time_var
   
   # Run the AJ model
   aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
@@ -365,38 +356,36 @@ aj_estimator <- function(data_subset, outcome_ind, time_var) {
 # average treatment effect (ATE).
 ##############################################
 
+## Revised final_pregout_mar_mnar final_pregout_mar_mnar_tte
 
-## Revised
+calculate_aj_risks <- function(dataset, sev_dist) { #, outcome_ind, time_var
+  
+  # outcome_ind <- enquo(outcome_ind)
+  # time_var <- enquo(time_var)
 
-calculate_aj_risks <- function(dataset, sev_dist, outcome_ind, time_var) {
+  # Convert the dataset to a data.table
+  mar <- as.data.table(dataset)
   
-  # browser()
-  outcome_ind <- enquo(outcome_ind)
-  time_var <- enquo(time_var)
+  # Calculate the count for each group
+  mar[, count := .N, by = .(trt, final_pregout_marmnar_tte)]
+
+  # Jitter event times and calculate the adjusted time and outcome
+  mar[, jitter := runif(.N, min = -.01, max = .01)]
+  mar[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
+  mar[, outcome := as.factor(final_pregout_mar_mnar)]
   
-  # Jitter ties within strata of trt
-  results <- dataset %>% 
-    group_by(trt, !!time_var) %>% 
-    add_tally(name = "count") %>% 
-    ungroup() %>% 
-    mutate(
-      # Jitter event times
-      jitter = runif(n(), min = -.01, max = .01), 
-      time = ifelse(count > 1, !!time_var + jitter, !!time_var)
-    ) %>% 
-    # Now run the analyses
-    group_by(severity) %>%
-    do(aj_estimator(., outcome_ind = !!outcome_ind, time_var = !!time_var)) %>%
-    ungroup() %>% 
+
+  results <- mar[, aj_estimator(.SD), by = severity] %>%
+    as.tibble() %>%
     # Convert severity to its original data types if necessary
-    mutate(severity = as.numeric(severity)) %>% 
+    mutate(severity = as.numeric(severity)) %>%
     # Left merge the severity distribution onto the risks
-    left_join(sev_dist, by = c("severity" = "severity")) %>% 
+    left_join(sev_dist, by = c("severity" = "severity")) %>%
     mutate(risk0_std = risk0 * prop,
-           risk1_std = risk1 * prop) %>% 
+           risk1_std = risk1 * prop) %>%
     # Summarize the risks within strata of PNC week
     summarize(risk0 = sum(risk0_std),
-              risk1 = sum(risk1_std)) %>% 
+              risk1 = sum(risk1_std)) %>%
     mutate(rd = risk1 - risk0,
            rr = risk1 / risk0)
   

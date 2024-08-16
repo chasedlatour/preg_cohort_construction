@@ -17,7 +17,7 @@ library(tarchetypes) # Load other packages as needed.
 # Set target options:
 tar_option_set(
   # Packages that your targets need for their tasks.
-  packages = c("tibble", "tidyverse", "readxl", "survival", "rlang"),
+  packages = c("tibble", "tidyverse", "readxl", "survival", "rlang", "data.table"),
   seed = 13049857,
   # format = "qs", # Optionally set the default storage format. qs is fast.
   # controller = crew::crew_controller_local(workers = 2, seconds_idle = 3),
