@@ -375,7 +375,7 @@ calculate_aj_risks <- function(dataset, sev_dist, outcome_ind, time_var) {
   time_var <- enquo(time_var)
   
   # Jitter ties within strata of trt
-  mar <- dataset %>% 
+  results <- dataset %>% 
     group_by(trt, !!time_var) %>% 
     add_tally(name = "count") %>% 
     ungroup() %>% 
@@ -383,39 +383,22 @@ calculate_aj_risks <- function(dataset, sev_dist, outcome_ind, time_var) {
       # Jitter event times
       jitter = runif(n(), min = -.01, max = .01), 
       time = ifelse(count > 1, !!time_var + jitter, !!time_var)
-    )
-  
-  # Split the dataset by severity
-  split_data <- split(mar, list(mar$severity))
-  
-  # Apply the aj_estimator function to each subset
-  results_list <- lapply(split_data, function(subset) aj_estimator(subset, 
-                                                                   outcome_ind = !!outcome_ind, 
-                                                                   time_var = !!time_var))
-  
-  # Combine the results into a single data frame
-  results <- bind_rows(results_list, .id = "group")
-  
-  # Extract severity from the group column
-  results <- results %>%
-    separate(group, into = c("severity"), sep = "\\.")
-  
-  # Convert severity to its original data types if necessary
-  results <- results %>%
-    mutate(severity = as.numeric(severity))
-  
-  # Left merge the severity distribution onto the risks
-  results_sev_merge <- left_join(results, sev_dist, by = c("severity" = "severity")) %>% 
+    ) %>% 
+    # Now run the analyses
+    group_by(severity) %>%
+    do(aj_estimator(., outcome_ind = !!outcome_ind, time_var = !!time_var)) %>%
+    ungroup() %>% 
+    # Convert severity to its original data types if necessary
+    mutate(severity = as.numeric(severity)) %>% 
+    # Left merge the severity distribution onto the risks
+    left_join(sev_dist, by = c("severity" = "severity")) %>% 
     mutate(risk0_std = risk0 * prop,
            risk1_std = risk1 * prop) %>% 
     # Summarize the risks within strata of PNC week
     summarize(risk0 = sum(risk0_std),
-              risk1 = sum(risk1_std))
-  
-  # Final risks dataset
-  risks <- results_sev_merge %>% 
+              risk1 = sum(risk1_std)) %>% 
     mutate(rd = risk1 - risk0,
            rr = risk1 / risk0)
   
-  return(risks)
+  return(results)
 }
