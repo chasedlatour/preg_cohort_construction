@@ -44,7 +44,7 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       ".xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 10000
+treatment_effects$n = 500
 
 
 # Create a dataset with the missing data parameters

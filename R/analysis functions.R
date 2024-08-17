@@ -52,78 +52,136 @@ run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
 
 prep_data_for_analysis <- function(data, pnc_wk){
   
-  # First, need to do some data cleaning
-  hold <- data %>% 
-    mutate(
-      
-      # Make indicator variables for observed delivery
-      obs_delivery_mar_mnar = ifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 18,
-                                     1,
-                                     0),
-      
-      # Make indicator for observed pregnancy outcome
-      obs_outcome_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
-                                    1,
-                                    0),
-      
-      
-      # Establish the time-to-event outcomes for survival analyses
-      ## 0 = censor
-      ## 1 = preeclampsia, regardless of preg outcome
-      ## 2 = fetal death wo preeclampsia
-      ## 3 = live birth wo preeclampsia
-      # Calculate times to event
-      
-      ## Outcome indicator - multivariate, important for AJ estimator
-      final_pregout_mar_mnar = case_when(pregout_mar_mnar == 'unknown' ~ 0,
-                                         preeclampsia_mar_mnar == 1 ~ 1,
-                                         pregout_mar_mnar == 'fetaldeath' ~ 2,
-                                         pregout_mar_mnar == 'livebirth' ~ 3),
-      
-      ## Time to event - Establish the time-to-event for the outcome indicator
-      final_pregout_marmnar_tte = ifelse(pregout_mar_mnar == 'unknown',
-                                         t_ltfu_mar_mnar - pnc_wk,
-                                         pregout_t_mar_mnar - pnc_wk),
-      
-      ## Add small constant to follow-up time for immediate censors
-      final_pregout_marmnar_tte = ifelse(final_pregout_marmnar_tte == 0,
-                                         0.0001,
-                                         final_pregout_marmnar_tte),
-      
-      # Sensitivity analyses
-      
-      ## Outcome (pre-delivery preeclampsia) immediately upon censoring
-      ## among all pregnancies LTFU
-      preeclampsia_marmnar_immediate_outc_all = ifelse(pregout_mar_mnar == 'unknown',
-                                                       1,
-                                                       preeclampsia_mar_mnar),
-      
-      ## Outcome immediately upon censoring only among treated. Assume
-      ## that untreated do not have outcome
-      preeclampsia_marmnar_immediate_outc_trt = case_when(pregout_mar_mnar == 'unknown' &
-                                                            trt == 1 ~ 1,
-                                                          pregout_mar_mnar == 'unknown' &
-                                                            trt == 0 ~ 0,
-                                                          pregout_mar_mnar != 'unknown' ~ preeclampsia_mar_mnar),
-      
-      ## Outcome immediately upon censoring only among untreated. Assume
-      ## that treated do not have outcome
-      preeclampsia_marmnar_immediate_outc_untrt = case_when(pregout_mar_mnar == 'unknown' &
-                                                              trt == 0 ~ 1,
-                                                            pregout_mar_mnar == 'unknown' &
-                                                              trt == 1 ~ 0,
-                                                            pregout_mar_mnar != 'unknown' ~ preeclampsia_mar_mnar),
-      
-      ## No outcome and go the full follow-up without outcome. 
-      preeclampsia_marmnar_no_outc = ifelse(pregout_mar_mnar == 'unknown',
-                                            0,
-                                            preeclampsia_mar_mnar)
-      
-    )
+  # Convert data to a data.table (if it's not already)
+  data <- as.data.table(data)
   
-  return(hold)
+  # Perform data cleaning and manipulation using data.table syntax
+  data[, `:=`(
+    
+    # Make indicator variables for observed delivery
+    obs_delivery_mar_mnar = fifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 18, 1, 0),
+    
+    # Make indicator for observed pregnancy outcome
+    obs_outcome_mar_mnar = fifelse(ltfu_mar_mnar == 'not', 1, 0),
+    
+    # Outcome indicator - multivariate, important for AJ estimator
+    final_pregout_mar_mnar = fcase(
+      pregout_mar_mnar == 'unknown', 0,
+      preeclampsia_mar_mnar == 1, 1,
+      pregout_mar_mnar == 'fetaldeath', 2,
+      pregout_mar_mnar == 'livebirth', 3
+    ),
+    
+    # Time to event - Establish the time-to-event for the outcome indicator
+    final_pregout_marmnar_tte = fifelse(
+      pregout_mar_mnar == 'unknown',
+      t_ltfu_mar_mnar - pnc_wk,
+      pregout_t_mar_mnar - pnc_wk
+    ),
+    
+    # Sensitivity analyses
+    preeclampsia_marmnar_immediate_outc_all = fifelse(pregout_mar_mnar == 'unknown', 1, preeclampsia_mar_mnar),
+    
+    preeclampsia_marmnar_immediate_outc_trt = fcase(
+      pregout_mar_mnar == 'unknown' & trt == 1, 1,
+      pregout_mar_mnar == 'unknown' & trt == 0, 0,
+      pregout_mar_mnar != 'unknown', preeclampsia_mar_mnar
+    ),
+    
+    preeclampsia_marmnar_immediate_outc_untrt = fcase(
+      pregout_mar_mnar == 'unknown' & trt == 0, 1,
+      pregout_mar_mnar == 'unknown' & trt == 1, 0,
+      pregout_mar_mnar != 'unknown', preeclampsia_mar_mnar
+    ),
+    
+    preeclampsia_marmnar_no_outc = fifelse(pregout_mar_mnar == 'unknown', 0, preeclampsia_mar_mnar)
+  )]
   
+  
+  # Add small constant to follow-up time for immediate censors
+  data[, final_pregout_marmnar_tte := fifelse(final_pregout_marmnar_tte == 0, 0.0001, final_pregout_marmnar_tte)]
+  
+  return(data)
 }
+
+
+
+
+
+# prep_data_for_analysis <- function(data, pnc_wk){
+#   
+#   # First, need to do some data cleaning
+#   hold <- data %>% 
+#     mutate(
+#       
+#       # Make indicator variables for observed delivery
+#       obs_delivery_mar_mnar = ifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 18,
+#                                      1,
+#                                      0),
+#       
+#       # Make indicator for observed pregnancy outcome
+#       obs_outcome_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
+#                                     1,
+#                                     0),
+#       
+#       
+#       # Establish the time-to-event outcomes for survival analyses
+#       ## 0 = censor
+#       ## 1 = preeclampsia, regardless of preg outcome
+#       ## 2 = fetal death wo preeclampsia
+#       ## 3 = live birth wo preeclampsia
+#       # Calculate times to event
+#       
+#       ## Outcome indicator - multivariate, important for AJ estimator
+#       final_pregout_mar_mnar = case_when(pregout_mar_mnar == 'unknown' ~ 0,
+#                                          preeclampsia_mar_mnar == 1 ~ 1,
+#                                          pregout_mar_mnar == 'fetaldeath' ~ 2,
+#                                          pregout_mar_mnar == 'livebirth' ~ 3),
+#       
+#       ## Time to event - Establish the time-to-event for the outcome indicator
+#       final_pregout_marmnar_tte = ifelse(pregout_mar_mnar == 'unknown',
+#                                          t_ltfu_mar_mnar - pnc_wk,
+#                                          pregout_t_mar_mnar - pnc_wk),
+#       
+#       ## Add small constant to follow-up time for immediate censors
+#       final_pregout_marmnar_tte = ifelse(final_pregout_marmnar_tte == 0,
+#                                          0.0001,
+#                                          final_pregout_marmnar_tte),
+#       
+#       # Sensitivity analyses
+#       
+#       ## Outcome (pre-delivery preeclampsia) immediately upon censoring
+#       ## among all pregnancies LTFU
+#       preeclampsia_marmnar_immediate_outc_all = ifelse(pregout_mar_mnar == 'unknown',
+#                                                        1,
+#                                                        preeclampsia_mar_mnar),
+#       
+#       ## Outcome immediately upon censoring only among treated. Assume
+#       ## that untreated do not have outcome
+#       preeclampsia_marmnar_immediate_outc_trt = case_when(pregout_mar_mnar == 'unknown' &
+#                                                             trt == 1 ~ 1,
+#                                                           pregout_mar_mnar == 'unknown' &
+#                                                             trt == 0 ~ 0,
+#                                                           pregout_mar_mnar != 'unknown' ~ preeclampsia_mar_mnar),
+#       
+#       ## Outcome immediately upon censoring only among untreated. Assume
+#       ## that treated do not have outcome
+#       preeclampsia_marmnar_immediate_outc_untrt = case_when(pregout_mar_mnar == 'unknown' &
+#                                                               trt == 0 ~ 1,
+#                                                             pregout_mar_mnar == 'unknown' &
+#                                                               trt == 1 ~ 0,
+#                                                             pregout_mar_mnar != 'unknown' ~ preeclampsia_mar_mnar),
+#       
+#       ## No outcome and go the full follow-up without outcome. 
+#       preeclampsia_marmnar_no_outc = ifelse(pregout_mar_mnar == 'unknown',
+#                                             0,
+#                                             preeclampsia_mar_mnar)
+#       
+#     )
+#   
+#   return(hold)
+#   
+# }
 
 #########################################
 # FUNCTION: conduct_analysis()
@@ -133,23 +191,29 @@ prep_data_for_analysis <- function(data, pnc_wk){
 
 conduct_analysis <- function(data){
   
-  # Get the severity distribution for each simulation
-  sev_dist <- get_severity_dist(data)
+  # Calculate the distribution of severity using data.table syntax
+  sev_dist <- data[, .(prop = .N / nrow(data)), by = severity]
   
   # Get the risks from the potential outcomes
-  potential_risks <- calculate_pot_risks(data)
+  pot_out_risks <- data[, .(
+    risk0 = sum(preeclampsia0) / .N,
+    risk1 = sum(preeclampsia1) / .N,
+    rd = (sum(preeclampsia1) / .N) - (sum(preeclampsia0) / .N),
+    rr = (sum(preeclampsia1) / sum(preeclampsia0))
+  )] %>% 
+    as_tibble()
   
   # Get the risks among observed deliveries
-
-    observed_deliveries_mar_mnar <- data %>% 
-      filter(obs_delivery_mar_mnar == 1) %>% 
-      calculate_risks(sev_dist, preeclampsia_pre_miss)
+  observed_deliveries <- data[obs_delivery_mar_mnar == 1]
+  
+  observed_deliveries_mar_mnar <- calculate_risks(observed_deliveries, sev_dist) %>% 
+    as_tibble()
   
   # Get the risks among observed pregnancy outcomes
-    
-    observed_outcomes_mar_mnar <- data %>% 
-      filter(obs_outcome_mar_mnar == 1) %>% 
-      calculate_risks(sev_dist, preeclampsia_pre_miss)
+  observed_outcomes <- data[obs_outcome_mar_mnar == 1]
+  
+  observed_outcomes_mar_mnar <- calculate_risks(observed_outcomes, sev_dist) %>% 
+    as_tibble()
   
   # Time-to-event analyses
     
@@ -157,89 +221,207 @@ conduct_analysis <- function(data){
                                        sev_dist)
     
   # Sensitivity analyses
+    sens_anal_risks <- data[, .(
+      ## Assume that all missing outcomes have an outcome
+      risk_all_outc = sum(preeclampsia_marmnar_immediate_outc_all) / .N,
+      ## Assume that treated missing have an outcome
+      risk_trt_outc = sum(preeclampsia_marmnar_immediate_outc_trt) / .N,
+      ## Assume that untreated missing have an outcome
+      risk_untrt_out = sum(preeclampsia_marmnar_immediate_outc_untrt) / .N,
+      ## Assume that all missing outcomes do not have an outcome
+      risk_no_outc = sum(preeclampsia_marmnar_no_outc) / .N
+    ), by = .(trt, severity)]
+    
+    ## Merge severity distribution
+    merge_sens_anal <- merge(sens_anal_risks, sev_dist, by = "severity", all.x = TRUE)
+    
+    ## Multiply through
+    sens_analyses <- merge_sens_anal[, `:=`(
+      all_outc = risk_all_outc * prop,
+      trt_outc = risk_trt_outc * prop,
+      untrt_outc = risk_untrt_out * prop,
+      no_outc = risk_no_outc * prop
+    )] %>% 
+      as_tibble() %>% 
+      group_by(trt) %>% 
+      summarize(
+        all_outc = sum(all_outc),
+        trt_outc = sum(trt_outc),
+        untrt_outc = sum(untrt_outc),
+        no_outc = sum(no_outc)
+      )
+    
     
     ## Assume that all missing outcomes have an outcome
+    sens_anal_mar_mnar_all_outc <- sens_analyses %>% 
+      select(trt, all_outc) %>% 
+      pivot_wider(names_from = trt,
+                  values_from = all_outc,
+                  names_prefix = "risk") %>% 
+      mutate(
+        rd = risk1 - risk0,
+        rr = risk1 / risk0
+      )
     
-      sens_anal_mar_mnar_all_outc <- calculate_risks(data, sev_dist,
-                                                     preeclampsia_marmnar_immediate_outc_all)
-      
     ## Assume that treated missing have an outcome
-      sens_anal_mar_mnar_trt_outc <- calculate_risks(data, sev_dist,
-                                                     preeclampsia_marmnar_immediate_outc_trt)
+    sens_anal_mar_mnar_trt_outc <- sens_analyses %>% 
+      select(trt, trt_outc) %>% 
+      pivot_wider(names_from = trt,
+                  values_from = trt_outc,
+                  names_prefix = "risk") %>% 
+      mutate(
+        rd = risk1 - risk0,
+        rr = risk1 / risk0
+      )
       
     ## Assume that untreated missing have an outcome
-      sens_anal_mar_mnar_untrt_out <- calculate_risks(data, sev_dist,
-                                                      preeclampsia_marmnar_immediate_outc_untrt)
+    sens_anal_mar_mnar_untrt_outc <- sens_analyses %>% 
+      select(trt, untrt_outc) %>% 
+      pivot_wider(names_from = trt,
+                  values_from = untrt_outc,
+                  names_prefix = "risk") %>% 
+      mutate(
+        rd = risk1 - risk0,
+        rr = risk1 / risk0
+      )
       
     ## Assume that all missing outcomes do not have an outcome
-      
-      sens_anal_mar_mnar_no_outc <- calculate_risks(data, sev_dist,
-                                                    preeclampsia_marmnar_no_outc)
+    sens_anal_mar_mnar_no_outc <- sens_analyses %>% 
+      select(trt, no_outc) %>% 
+      pivot_wider(names_from = trt,
+                  values_from = no_outc,
+                  names_prefix = "risk") %>% 
+      mutate(
+        rd = risk1 - risk0,
+        rr = risk1 / risk0
+      )
 
   
   return(tibble(
     sev_dist = list(sev_dist),
-    potential_risks = list(potential_risks),
+    potential_risks = list(pot_out_risks),
     observed_deliveries = list(observed_deliveries_mar_mnar),
     observed_outcomes = list(observed_outcomes_mar_mnar),
     tte = list(tte_mar_mnar),
     sens_anal_all_outc = list(sens_anal_mar_mnar_all_outc),
     sens_anal_trt_outc = list(sens_anal_mar_mnar_trt_outc),
-    sens_anal_untrt_out = list(sens_anal_mar_mnar_untrt_out),
+    sens_anal_untrt_out = list(sens_anal_mar_mnar_untrt_outc),
     sens_anal_no_outc = list(sens_anal_mar_mnar_no_outc)
   ))
 
 }
+
+
+
+# conduct_analysis <- function(data){
+#   
+#   # Get the severity distribution for each simulation
+#   sev_dist <- get_severity_dist(data)
+#   
+#   # Get the risks from the potential outcomes
+#   potential_risks <- calculate_pot_risks(data)
+#   
+#   # Get the risks among observed deliveries
+#   
+#   observed_deliveries_mar_mnar <- data %>% 
+#     filter(obs_delivery_mar_mnar == 1) %>% 
+#     calculate_risks(sev_dist, preeclampsia_pre_miss)
+#   
+#   # Get the risks among observed pregnancy outcomes
+#   
+#   observed_outcomes_mar_mnar <- data %>% 
+#     filter(obs_outcome_mar_mnar == 1) %>% 
+#     calculate_risks(sev_dist, preeclampsia_pre_miss)
+#   
+#   # Time-to-event analyses
+#   
+#   tte_mar_mnar <- calculate_aj_risks(data, 
+#                                      sev_dist)
+#   
+#   # Sensitivity analyses
+#   
+#   ## Assume that all missing outcomes have an outcome
+#   
+#   sens_anal_mar_mnar_all_outc <- calculate_risks(data, sev_dist,
+#                                                  preeclampsia_marmnar_immediate_outc_all)
+#   
+#   ## Assume that treated missing have an outcome
+#   sens_anal_mar_mnar_trt_outc <- calculate_risks(data, sev_dist,
+#                                                  preeclampsia_marmnar_immediate_outc_trt)
+#   
+#   ## Assume that untreated missing have an outcome
+#   sens_anal_mar_mnar_untrt_out <- calculate_risks(data, sev_dist,
+#                                                   preeclampsia_marmnar_immediate_outc_untrt)
+#   
+#   ## Assume that all missing outcomes do not have an outcome
+#   
+#   sens_anal_mar_mnar_no_outc <- calculate_risks(data, sev_dist,
+#                                                 preeclampsia_marmnar_no_outc)
+#   
+#   
+#   return(tibble(
+#     sev_dist = list(sev_dist),
+#     potential_risks = list(potential_risks),
+#     observed_deliveries = list(observed_deliveries_mar_mnar),
+#     observed_outcomes = list(observed_outcomes_mar_mnar),
+#     tte = list(tte_mar_mnar),
+#     sens_anal_all_outc = list(sens_anal_mar_mnar_all_outc),
+#     sens_anal_trt_outc = list(sens_anal_mar_mnar_trt_outc),
+#     sens_anal_untrt_out = list(sens_anal_mar_mnar_untrt_out),
+#     sens_anal_no_outc = list(sens_anal_mar_mnar_no_outc)
+#   ))
+#   
+# }
 
  
 
 
 
 
-##############################################
-# FUNCTION: get_severity_dist()
-# PURPOSE: The purpose of this function is to 
-# get the distribution of patients by 
-# disease severity at baseline.
-# Target population: ALL patients.
-##############################################
-
-get_severity_dist <- function(data){
-  
-  sev_dist <- data %>%
-    group_by(severity) %>%
-    summarize(prop = n() / nrow(data),
-              .groups = 'drop')
-  
-  return(sev_dist)
-  
-}
-
-
+# ##############################################
+# # FUNCTION: get_severity_dist()
+# # PURPOSE: The purpose of this function is to 
+# # get the distribution of patients by 
+# # disease severity at baseline.
+# # Target population: ALL patients.
+# ##############################################
+# 
+# get_severity_dist <- function(data){
+#   
+#   sev_dist <- data %>%
+#     group_by(severity) %>%
+#     summarize(prop = n() / nrow(data),
+#               .groups = 'drop')
+#   
+#   return(sev_dist)
+#   
+# }
 
 
 
-##############################################
-# FUNCTION: calculate_pot_risks()
-# PURPOSE: The purpose of this function is to 
-# calculate the risk of preeclampsia using
-# the potential outcomes. 
-##############################################
 
-calculate_pot_risks <- function(dataset){
-  
-  # Calculate the risks using the potential outcomes
-  pot_out_risks <- dataset %>% 
-    summarize(
-      risk0 = sum(preeclampsia0) / n(),
-      risk1 = sum(preeclampsia1) / n(),
-      rd = risk1 - risk0,
-      rr = risk1 / risk0
-    )
 
-  return(pot_out_risks)
-  
-}
+# ##############################################
+# # FUNCTION: calculate_pot_risks()
+# # PURPOSE: The purpose of this function is to 
+# # calculate the risk of preeclampsia using
+# # the potential outcomes. 
+# ##############################################
+# 
+# calculate_pot_risks <- function(dataset){
+#   
+#   # Calculate the risks using the potential outcomes
+#   pot_out_risks <- dataset %>% 
+#     summarize(
+#       risk0 = sum(preeclampsia0) / n(),
+#       risk1 = sum(preeclampsia1) / n(),
+#       rd = risk1 - risk0,
+#       rr = risk1 / risk0
+#     )
+# 
+#   return(pot_out_risks)
+#   
+# }
 
 
 
@@ -258,40 +440,74 @@ calculate_pot_risks <- function(dataset){
 ##############################################
 
 # Revised so that I can call the outcome variable for calculating risks in the function.
-
-calculate_risks <- function(dataset, sev_dist, risk_var){
+calculate_risks <- function(dataset, sev_dist){
   
-  risk_var <- enquo(risk_var)
+  # Calculate the risks within strata of treatment and severity using the static variable preeclampsia_pre_miss
+  strat_risks <- dataset[, .(
+    risk = sum(preeclampsia_pre_miss) / .N
+  ), by = .(trt, severity)]
   
-  # Calculate the risks within strata of treatment and severity
-  strat_risks <- dataset %>% 
-    group_by(trt, severity) %>% 
-    summarize(
-      risk = sum(!!risk_var) / n(),
-      .groups = 'drop'
-    )
+  # Merge the severity distribution and calculate the standardized risks
+  merge_sev_prop <- merge(strat_risks, sev_dist, by = "severity", all.x = TRUE)
   
-  # Merge the severity distribution and multiply through to calculate the 
-  # standardized risks within each trt strata.
-  merge_sev_prop <- left_join(strat_risks, sev_dist, by = c("severity" = "severity")) %>% 
-    mutate(std_risk = risk * prop) %>% 
-    group_by(trt) %>% 
-    summarize(risk = sum(std_risk),
-              .groups = 'drop')
+  merge_sev_prop[, std_risk := risk * prop]
   
-  strata_risks_wide <- merge_sev_prop %>% 
-    pivot_wider(names_from = trt, 
-                values_from = risk, 
-                names_prefix = "risk")
+  # Summarize risks within each treatment group
+  final_risks <- merge_sev_prop[, .(
+    risk = sum(std_risk)
+  ), by = trt]
   
-  risks <- strata_risks_wide %>% 
-    ungroup() %>% 
-    mutate(rd = risk1 - risk0,
-           rr = risk1 / risk0)
-    
+  # Reshape data from long to wide format
+  final_risks_wide <- dcast(final_risks, . ~ trt, value.var = "risk")[, .(risk0 = `0`, risk1 = `1`)]
   
-  return(risks)
+  # Calculate risk difference and risk ratio
+  final_risks_wide[, `:=`(
+    rd = risk1 - risk0,
+    rr = risk1 / risk0
+  )]
+  
+  # Return the final results
+  return(final_risks_wide)
 }
+
+
+
+
+
+
+# calculate_risks <- function(dataset, sev_dist, risk_var){
+#   
+#   risk_var <- enquo(risk_var)
+#   
+#   # Calculate the risks within strata of treatment and severity
+#   strat_risks <- dataset %>% 
+#     group_by(trt, severity) %>% 
+#     summarize(
+#       risk = sum(!!risk_var) / n(),
+#       .groups = 'drop'
+#     )
+#   
+#   # Merge the severity distribution and multiply through to calculate the 
+#   # standardized risks within each trt strata.
+#   merge_sev_prop <- left_join(strat_risks, sev_dist, by = c("severity" = "severity")) %>% 
+#     mutate(std_risk = risk * prop) %>% 
+#     group_by(trt) %>% 
+#     summarize(risk = sum(std_risk),
+#               .groups = 'drop')
+#   
+#   strata_risks_wide <- merge_sev_prop %>% 
+#     pivot_wider(names_from = trt, 
+#                 values_from = risk, 
+#                 names_prefix = "risk")
+#   
+#   risks <- strata_risks_wide %>% 
+#     ungroup() %>% 
+#     mutate(rd = risk1 - risk0,
+#            rr = risk1 / risk0)
+#     
+#   
+#   return(risks)
+# }
 
 
 
@@ -315,29 +531,62 @@ calculate_risks <- function(dataset, sev_dist, risk_var){
 # average treatment effect (ATE).
 ##############################################
 
-aj_estimator <- function(data_subset) { #outcome_ind, time_var
+aj_estimator <- function(data_subset) {
   
   # Run the AJ model
   aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
-
+  
+  # Extract the summary of the survival fit
   mod <- summary(aj)
   
-  summod <- data.frame(t = mod$time,
-                       r = mod$pstate[, 2], 
-                       trt = c(rep(0, length(mod[["strata"]][mod[["strata"]] == "trt=0"])), 
-                               rep(1, length(mod[["strata"]][mod[["strata"]] == "trt=1"])))
-  ) %>%
-    # filter(t < 43 + 0.5) %>%  # Deal with the jittering of outcomes
-    group_by(trt) %>% 
-    summarize(risk = last(r),
-              .groups = 'drop') %>% 
-    pivot_wider(names_from = trt,
-                values_from = risk,
-                names_glue = "{.value}{trt}") %>% 
-    select(risk0, risk1)
+  # Create a data.table from the summary output
+  summod <- data.table(
+    t = mod$time,
+    r = mod$pstate[, 2],
+    trt = c(rep(0, length(mod$strata[mod$strata == "trt=0"])), 
+            rep(1, length(mod$strata[mod$strata == "trt=1"])))
+  )
   
-  return(summod)
+  # Group by treatment and summarize the last risk value
+  summod <- summod[, .(risk = last(r)), by = trt]
+  
+  # Reshape data from long to wide format
+  summod_wide <- dcast(summod, . ~ trt, value.var = "risk")
+  
+  # Rename the columns to risk0 and risk1
+  summod_wide <- summod_wide[, .(risk0 = `0`, risk1 = `1`)]
+  
+  return(summod_wide)
 }
+
+
+
+
+
+
+# aj_estimator <- function(data_subset) { #outcome_ind, time_var
+#   
+#   # Run the AJ model
+#   aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
+# 
+#   mod <- summary(aj)
+#   
+#   summod <- data.frame(t = mod$time,
+#                        r = mod$pstate[, 2], 
+#                        trt = c(rep(0, length(mod[["strata"]][mod[["strata"]] == "trt=0"])), 
+#                                rep(1, length(mod[["strata"]][mod[["strata"]] == "trt=1"])))
+#   ) %>%
+#     # filter(t < 43 + 0.5) %>%  # Deal with the jittering of outcomes
+#     group_by(trt) %>% 
+#     summarize(risk = last(r),
+#               .groups = 'drop') %>% 
+#     pivot_wider(names_from = trt,
+#                 values_from = risk,
+#                 names_glue = "{.value}{trt}") %>% 
+#     select(risk0, risk1)
+#   
+#   return(summod)
+# }
 
            
 
@@ -360,34 +609,68 @@ aj_estimator <- function(data_subset) { #outcome_ind, time_var
 
 calculate_aj_risks <- function(dataset, sev_dist) { #, outcome_ind, time_var
   
-  # outcome_ind <- enquo(outcome_ind)
-  # time_var <- enquo(time_var)
-
-  # Convert the dataset to a data.table
-  mar <- as.data.table(dataset)
-  
   # Calculate the count for each group
-  mar[, count := .N, by = .(trt, final_pregout_marmnar_tte)]
+  dataset[, count := .N, by = .(trt, final_pregout_marmnar_tte)]
 
   # Jitter event times and calculate the adjusted time and outcome
-  mar[, jitter := runif(.N, min = -.01, max = .01)]
-  mar[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
-  mar[, outcome := as.factor(final_pregout_mar_mnar)]
+  dataset[, jitter := runif(.N, min = -.01, max = .01)]
+  dataset[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
+  dataset[, outcome := as.factor(final_pregout_mar_mnar)]
   
-
-  results <- mar[, aj_estimator(.SD), by = severity] %>%
-    as.tibble() %>%
-    # Convert severity to its original data types if necessary
-    mutate(severity = as.numeric(severity)) %>%
-    # Left merge the severity distribution onto the risks
-    left_join(sev_dist, by = c("severity" = "severity")) %>%
-    mutate(risk0_std = risk0 * prop,
-           risk1_std = risk1 * prop) %>%
-    # Summarize the risks within strata of PNC week
-    summarize(risk0 = sum(risk0_std),
-              risk1 = sum(risk1_std)) %>%
-    mutate(rd = risk1 - risk0,
-           rr = risk1 / risk0)
+  results <- dataset[, aj_estimator(.SD), by = severity] 
   
-  return(results)
+  results[, severity := as.numeric(severity)]
+  
+  # Left merge the severity distribution onto the risks
+  merge_sev <- merge(results, sev_dist, by = "severity", all.x = TRUE)
+  
+  merge_sev[, `:=`(
+    risk0_std = risk0 * prop,
+    risk1_std = risk1 * prop
+  )]
+  
+  combined <- merge_sev[, .(
+    risk0 = sum(risk0_std),
+    risk1 = sum(risk1_std),
+    rd = sum(risk1_std) - sum(risk0_std),
+    rr = sum(risk1_std) / sum(risk0_std)
+  )]
+  
+  return(combined)
 }
+
+
+
+# calculate_aj_risks <- function(dataset, sev_dist) { #, outcome_ind, time_var
+#   
+#   # outcome_ind <- enquo(outcome_ind)
+#   # time_var <- enquo(time_var)
+#   
+#   # Convert the dataset to a data.table
+#   mar <- as.data.table(dataset)
+#   
+#   # Calculate the count for each group
+#   mar[, count := .N, by = .(trt, final_pregout_marmnar_tte)]
+#   
+#   # Jitter event times and calculate the adjusted time and outcome
+#   mar[, jitter := runif(.N, min = -.01, max = .01)]
+#   mar[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
+#   mar[, outcome := as.factor(final_pregout_mar_mnar)]
+#   
+#   
+#   results <- mar[, aj_estimator(.SD), by = severity] %>%
+#     as_tibble() %>%
+#     # Convert severity to its original data types if necessary
+#     mutate(severity = as.numeric(severity)) %>%
+#     # Left merge the severity distribution onto the risks
+#     left_join(sev_dist, by = c("severity" = "severity")) %>%
+#     mutate(risk0_std = risk0 * prop,
+#            risk1_std = risk1 * prop) %>%
+#     # Summarize the risks within strata of PNC week
+#     summarize(risk0 = sum(risk0_std),
+#               risk1 = sum(risk1_std)) %>%
+#     mutate(rd = risk1 - risk0,
+#            rr = risk1 / risk0)
+#   
+#   return(results)
+# }
