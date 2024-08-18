@@ -110,19 +110,120 @@ list(
             pnc_wk = pnc_wk
           )
         ),
-        # Analyze the data
+        # Prep the data for analysis
+        targets::tar_target(
+          data_prep,
+          as.data.table(cohort_data) %>% 
+            prep_data_for_analysis(pnc_wk = pnc_wk)
+        ),
+        # Derive the severity distribution
+        targets::tar_target(
+          severity_dist,
+          sev_dist(data_prep)
+        ),
+        # Get the risks using the potential outcomes
+        targets::tar_target(
+          potential_outcomes, 
+          potential_risks(data_prep)
+        ),
+        # Get the risks among the observed deliveries
+        targets::tar_target(
+          observed_deliveries,
+          calculate_risks(data_prep[obs_delivery_mar_mnar == 1], severity_dist) %>% 
+            as_tibble()
+        ),
+        # Get the risks among the pregnancies with observed outcomes
+        targets::tar_target(
+          observed_outcomes,
+           calculate_risks(data_prep[obs_outcome_mar_mnar == 1], severity_dist) %>% 
+            as_tibble()
+        ),
+        # Get the risks among all pregnancies using time-to-event methodology
+        targets::tar_target(
+          tte_mar_mnar,
+          calculate_aj_risks(data_prep, severity_dist) %>% 
+            as_tibble()
+        ),
+        # Get the risks for the sensitivity analyses
+        targets::tar_target(
+          sensitivity_analyses,
+          sensitivity_analysis_risks(data_prep, severity_dist)
+        ),
+        # Get the tibble for all outcomes - Assume that all missing outcomes have an outcome
+        targets::tar_target(
+          sens_anal_mar_mnar_all_outc,
+          sensitivity_analyses %>% 
+            select(trt, all_outc) %>% 
+            pivot_wider(names_from = trt,
+                        values_from = all_outc,
+                        names_prefix = "risk") %>% 
+            mutate(
+              rd = risk1 - risk0,
+              rr = risk1 / risk0
+            )
+        ),
+        # Get the tibble for all trt outcomes - Assume that treated missing have an outcome
+        targets::tar_target(
+          sens_anal_mar_mnar_trt_outc,
+          sensitivity_analyses %>% 
+            select(trt, trt_outc) %>% 
+            pivot_wider(names_from = trt,
+                        values_from = trt_outc,
+                        names_prefix = "risk") %>% 
+            mutate(
+              rd = risk1 - risk0,
+              rr = risk1 / risk0
+            )
+        ),
+        # Get the tibble for all untrt outcomes - Assume that untreated missing have an outcome
+        targets::tar_target(
+          sens_anal_mar_mnar_untrt_outc,
+          sensitivity_analyses %>% 
+            select(trt, untrt_outc) %>% 
+            pivot_wider(names_from = trt,
+                        values_from = untrt_outc,
+                        names_prefix = "risk") %>% 
+            mutate(
+              rd = risk1 - risk0,
+              rr = risk1 / risk0
+            )
+        ),
+        # Get the tibble for all no outcomes - Assume that all missing outcomes do not have an outcome
+        targets::tar_target(
+          sens_anal_mar_mnar_no_outc,
+          sensitivity_analyses %>% 
+            select(trt, no_outc) %>% 
+            pivot_wider(names_from = trt,
+                        values_from = no_outc,
+                        names_prefix = "risk") %>% 
+            mutate(
+              rd = risk1 - risk0,
+              rr = risk1 / risk0
+            )
+        ),
+        # Combine the analyzed data
         targets::tar_target(
           analyzed_data,
-          run_analysis(
-            cohort_data,
-            rr_abortion = rr_abortion,
-            rr_preec = rr_preec,
-            marginal_p_miss_severity = marginal_p_miss_severity,
-            beta12 = beta12,
-            marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-            gamma1 = gamma1,
-            pnc_wk = pnc_wk
-          )
+          tibble(
+            sev_dist = list(severity_dist),
+            potential_risks = list(potential_outcomes),
+            observed_deliveries = list(observed_deliveries),
+            observed_outcomes = list(observed_outcomes),
+            tte = list(tte_mar_mnar),
+            sens_anal_all_outc = list(sens_anal_mar_mnar_all_outc),
+            sens_anal_trt_outc = list(sens_anal_mar_mnar_trt_outc),
+            sens_anal_untrt_out = list(sens_anal_mar_mnar_untrt_outc),
+            sens_anal_no_outc = list(sens_anal_mar_mnar_no_outc)
+          ) %>% 
+            mutate(
+              rr_abortion = rr_abortion,
+              rr_preec = rr_preec,
+              marginal_p_miss_severity = marginal_p_miss_severity,
+              beta12 = beta12,
+              marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+              gamma1 = gamma1,
+              pnc_wk = pnc_wk
+            )
         )
       ),
       # Combine all of the descriptive statistics together

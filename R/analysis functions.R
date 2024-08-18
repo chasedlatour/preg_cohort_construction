@@ -18,25 +18,25 @@
 # tar_data <- tar_read(cohort_data_0_0.7_0.245_.0.2_7_0.7_0.7_Parameters_Abortion07_Preeclampsia07.xlsx_1_10000)
 
 
-run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
-                         beta12, marginal_p_miss_miscarriage, gamma1,
-                         pnc_wk){
-  
-  hold <- prep_data_for_analysis(data, pnc_wk) %>% 
-    conduct_analysis() %>% 
-    mutate(
-      rr_abortion = rr_abortion,
-      rr_preec = rr_preec,
-      marginal_p_miss_severity = marginal_p_miss_severity,
-      beta12 = beta12,
-      marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-      gamma1 = gamma1,
-      pnc_wk = pnc_wk
-    )
-  
-  return(hold)
-  
-}
+# run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
+#                          beta12, marginal_p_miss_miscarriage, gamma1,
+#                          pnc_wk){
+#   
+#   hold <- prep_data_for_analysis(data, pnc_wk) %>% 
+#     conduct_analysis() %>% 
+#     mutate(
+#       rr_abortion = rr_abortion,
+#       rr_preec = rr_preec,
+#       marginal_p_miss_severity = marginal_p_miss_severity,
+#       beta12 = beta12,
+#       marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+#       gamma1 = gamma1,
+#       pnc_wk = pnc_wk
+#     )
+#   
+#   return(hold)
+#   
+# }
 
 
 
@@ -50,10 +50,9 @@ run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
 # Checked: 08.09.2024
 #########################################
 
+data <- tar_read(data_frame_0.226_0.7_0_.0.2_7_1.5_1_Parameters_Abortion15_Preeclampsia1.xlsx_1_500)
+
 prep_data_for_analysis <- function(data, pnc_wk){
-  
-  # Convert data to a data.table (if it's not already)
-  data <- as.data.table(data)
   
   # Perform data cleaning and manipulation using data.table syntax
   data[, `:=`(
@@ -110,18 +109,39 @@ prep_data_for_analysis <- function(data, pnc_wk){
 
 
 
+
 #########################################
-# FUNCTION: conduct_analysis()
-# PURPOSE: Conduct the analyses for the
-# dataset.
+# FUNCTION: sev_dist()
+# PURPOSE: Get the baseline severity 
+# distribution.
 #########################################
 
-conduct_analysis <- function(data){
+sev_dist <- function(data){
   
   # Calculate the distribution of severity using data.table syntax
   sev_dist <- data[, .(prop = .N / nrow(data)), by = severity]
   
-  # Get the risks from the potential outcomes
+  return(sev_dist)
+  
+}
+
+
+
+
+
+
+
+
+
+
+#########################################
+# FUNCTION: potential_risks()
+# PURPOSE: Get the risks using the 
+# potential outcomes.
+#########################################
+
+potential_risks <- function(data){
+  
   pot_out_risks <- data[, .(
     risk0 = sum(preeclampsia0) / .N,
     risk1 = sum(preeclampsia1) / .N,
@@ -130,113 +150,11 @@ conduct_analysis <- function(data){
   )] %>% 
     as_tibble()
   
-  # Get the risks among observed deliveries
-  observed_deliveries <- data[obs_delivery_mar_mnar == 1]
+  return(pot_out_risks)
   
-  observed_deliveries_mar_mnar <- calculate_risks(observed_deliveries, sev_dist) %>% 
-    as_tibble()
-  
-  # Get the risks among observed pregnancy outcomes
-  observed_outcomes <- data[obs_outcome_mar_mnar == 1]
-  
-  observed_outcomes_mar_mnar <- calculate_risks(observed_outcomes, sev_dist) %>% 
-    as_tibble()
-  
-  # Time-to-event analyses
-    
-    tte_mar_mnar <- calculate_aj_risks(data, 
-                                       sev_dist)
-    
-  # Sensitivity analyses
-    sens_anal_risks <- data[, .(
-      ## Assume that all missing outcomes have an outcome
-      risk_all_outc = sum(preeclampsia_marmnar_immediate_outc_all) / .N,
-      ## Assume that treated missing have an outcome
-      risk_trt_outc = sum(preeclampsia_marmnar_immediate_outc_trt) / .N,
-      ## Assume that untreated missing have an outcome
-      risk_untrt_out = sum(preeclampsia_marmnar_immediate_outc_untrt) / .N,
-      ## Assume that all missing outcomes do not have an outcome
-      risk_no_outc = sum(preeclampsia_marmnar_no_outc) / .N
-    ), by = .(trt, severity)]
-    
-    ## Merge severity distribution
-    merge_sens_anal <- merge(sens_anal_risks, sev_dist, by = "severity", all.x = TRUE)
-    
-    ## Multiply through
-    sens_analyses <- merge_sens_anal[, `:=`(
-      all_outc = risk_all_outc * prop,
-      trt_outc = risk_trt_outc * prop,
-      untrt_outc = risk_untrt_out * prop,
-      no_outc = risk_no_outc * prop
-    )] %>% 
-      as_tibble() %>% 
-      group_by(trt) %>% 
-      summarize(
-        all_outc = sum(all_outc),
-        trt_outc = sum(trt_outc),
-        untrt_outc = sum(untrt_outc),
-        no_outc = sum(no_outc)
-      )
-    
-    
-    ## Assume that all missing outcomes have an outcome
-    sens_anal_mar_mnar_all_outc <- sens_analyses %>% 
-      select(trt, all_outc) %>% 
-      pivot_wider(names_from = trt,
-                  values_from = all_outc,
-                  names_prefix = "risk") %>% 
-      mutate(
-        rd = risk1 - risk0,
-        rr = risk1 / risk0
-      )
-    
-    ## Assume that treated missing have an outcome
-    sens_anal_mar_mnar_trt_outc <- sens_analyses %>% 
-      select(trt, trt_outc) %>% 
-      pivot_wider(names_from = trt,
-                  values_from = trt_outc,
-                  names_prefix = "risk") %>% 
-      mutate(
-        rd = risk1 - risk0,
-        rr = risk1 / risk0
-      )
-      
-    ## Assume that untreated missing have an outcome
-    sens_anal_mar_mnar_untrt_outc <- sens_analyses %>% 
-      select(trt, untrt_outc) %>% 
-      pivot_wider(names_from = trt,
-                  values_from = untrt_outc,
-                  names_prefix = "risk") %>% 
-      mutate(
-        rd = risk1 - risk0,
-        rr = risk1 / risk0
-      )
-      
-    ## Assume that all missing outcomes do not have an outcome
-    sens_anal_mar_mnar_no_outc <- sens_analyses %>% 
-      select(trt, no_outc) %>% 
-      pivot_wider(names_from = trt,
-                  values_from = no_outc,
-                  names_prefix = "risk") %>% 
-      mutate(
-        rd = risk1 - risk0,
-        rr = risk1 / risk0
-      )
-
-  
-  return(tibble(
-    sev_dist = list(sev_dist),
-    potential_risks = list(pot_out_risks),
-    observed_deliveries = list(observed_deliveries_mar_mnar),
-    observed_outcomes = list(observed_outcomes_mar_mnar),
-    tte = list(tte_mar_mnar),
-    sens_anal_all_outc = list(sens_anal_mar_mnar_all_outc),
-    sens_anal_trt_outc = list(sens_anal_mar_mnar_trt_outc),
-    sens_anal_untrt_out = list(sens_anal_mar_mnar_untrt_outc),
-    sens_anal_no_outc = list(sens_anal_mar_mnar_no_outc)
-  ))
-
 }
+
+
 
 
 
@@ -319,25 +237,38 @@ aj_estimator <- function(data_subset) {
   # Extract the summary of the survival fit
   mod <- summary(aj)
   
-  # Create a data.table from the summary output
+  # Instead of splitting into separate vectors and then processing, we can use
+  # data.table's vectorized capabilities to work on the whole summary at once
+  trt0_index <- which(mod$strata == "trt=0")
+  trt1_index <- which(mod$strata == "trt=1")
+  
+  # Create a data.table in a single step
   summod <- data.table(
+    trt = rep(0:1, c(length(trt0_index), length(trt1_index))),
     t = mod$time,
-    r = mod$pstate[, 2],
-    trt = c(rep(0, length(mod$strata[mod$strata == "trt=0"])), 
-            rep(1, length(mod$strata[mod$strata == "trt=1"])))
+    risk = mod$pstate[, 2]
   )
   
-  # Group by treatment and summarize the last risk value
-  summod <- summod[, .(risk = last(r)), by = trt]
+  # Since we only need the last risk value for each treatment, use .SD to optimize the selection
+  summod_wide <- summod[, .(risk = risk[.N]), by = trt]
   
-  # Reshape data from long to wide format
-  summod_wide <- dcast(summod, . ~ trt, value.var = "risk")
+  # Reshape data to wide format and calculate risk difference and ratio
+  risks <- dcast(summod_wide, . ~ trt, value.var = "risk")
   
-  # Rename the columns to risk0 and risk1
-  summod_wide <- summod_wide[, .(risk0 = `0`, risk1 = `1`)]
+  # Calculate risk difference and risk ratio directly
+  risks[, `:=`(
+    risk0 = `0`,
+    risk1 = `1`,
+    rd = `1` - `0`,
+    rr = `1` / `0`
+  )]
   
-  return(summod_wide)
+  return(risks[, .(risk0, risk1, rd, rr)])
 }
+
+
+
+
 
 
 
@@ -362,7 +293,7 @@ calculate_aj_risks <- function(dataset, sev_dist) { #, outcome_ind, time_var
   
   # Calculate the count for each group
   dataset[, count := .N, by = .(trt, final_pregout_marmnar_tte)]
-
+  
   # Jitter event times and calculate the adjusted time and outcome
   dataset[, jitter := runif(.N, min = -.01, max = .01)]
   dataset[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
@@ -389,4 +320,81 @@ calculate_aj_risks <- function(dataset, sev_dist) { #, outcome_ind, time_var
   
   return(combined)
 }
+
+
+
+
+
+
+
+
+##############################################
+# FUNCTION: sensitivity_analysis_risks()
+# PURPOSE: The purpose of this function is to 
+# calculate risks and their contrasts for the 
+# sensitivity analyses making different
+# assumptions about pregnancies with missing
+# outcomes.
+##############################################
+
+sensitivity_analysis_risks <- function(data, sev_dist){
+  
+  # Sensitivity analyses
+  sens_anal_risks <- data[, .(
+    ## Assume that all missing outcomes have an outcome
+    risk_all_outc = sum(preeclampsia_marmnar_immediate_outc_all) / .N,
+    ## Assume that treated missing have an outcome
+    risk_trt_outc = sum(preeclampsia_marmnar_immediate_outc_trt) / .N,
+    ## Assume that untreated missing have an outcome
+    risk_untrt_out = sum(preeclampsia_marmnar_immediate_outc_untrt) / .N,
+    ## Assume that all missing outcomes do not have an outcome
+    risk_no_outc = sum(preeclampsia_marmnar_no_outc) / .N
+  ), by = .(trt, severity)]
+  
+  ## Merge severity distribution
+  merge_sens_anal <- merge(sens_anal_risks, sev_dist, by = "severity", all.x = TRUE)
+  
+  ## Multiply through
+  sens_analyses <- merge_sens_anal[, `:=`(
+    all_outc = risk_all_outc * prop,
+    trt_outc = risk_trt_outc * prop,
+    untrt_outc = risk_untrt_out * prop,
+    no_outc = risk_no_outc * prop
+  )] %>% 
+    as_tibble() %>% 
+    group_by(trt) %>% 
+    summarize(
+      all_outc = sum(all_outc),
+      trt_outc = sum(trt_outc),
+      untrt_outc = sum(untrt_outc),
+      no_outc = sum(no_outc)
+    )
+  
+  return(sens_analyses)
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
