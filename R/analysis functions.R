@@ -50,8 +50,6 @@
 # Checked: 08.09.2024
 #########################################
 
-data <- tar_read(data_frame_0.226_0.7_0_.0.2_7_1.5_1_Parameters_Abortion15_Preeclampsia1.xlsx_1_500)
-
 prep_data_for_analysis <- function(data, pnc_wk){
   
   # Perform data cleaning and manipulation using data.table syntax
