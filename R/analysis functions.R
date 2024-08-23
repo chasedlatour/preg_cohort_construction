@@ -285,39 +285,57 @@ aj_estimator <- function(data_subset) {
 # average treatment effect (ATE).
 ##############################################
 
-## Revised final_pregout_mar_mnar final_pregout_mar_mnar_tte
+# First, calculate the risks within each severity strata using an AJ estimator.
 
-calculate_aj_risks <- function(dataset, sev_dist) { #, outcome_ind, time_var
+calculate_aj_risks_sev <- function(dataset, sev_dist) { 
   
+  # dataset is a subset of the original dataset, subset by severity value
+
   # Calculate the count for each group
   dataset[, count := .N, by = .(trt, final_pregout_marmnar_tte)]
-  
+
   # Jitter event times and calculate the adjusted time and outcome
   dataset[, jitter := runif(.N, min = -.01, max = .01)]
   dataset[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
   dataset[, outcome := as.factor(final_pregout_mar_mnar)]
-  
-  results <- dataset[, aj_estimator(.SD), by = severity] 
-  
+
+  results <- dataset[, aj_estimator(.SD), by = severity]
+
   results[, severity := as.numeric(severity)]
-  
+
   # Left merge the severity distribution onto the risks
   merge_sev <- merge(results, sev_dist, by = "severity", all.x = TRUE)
-  
+
   merge_sev[, `:=`(
     risk0_std = risk0 * prop,
     risk1_std = risk1 * prop
   )]
-  
-  combined <- merge_sev[, .(
+
+  return(merge_sev)
+
+}
+
+
+## Then, combine the standardized risks.
+## Originally, these were together but separated to ensure all computation 
+## could take place within one server session.
+
+calculate_aj_risks <- function(high_sev, middle_sev, low_sev){
+
+  hold <- rbind(high_sev, middle_sev, low_sev)
+
+  combined <- hold[, .(
     risk0 = sum(risk0_std),
     risk1 = sum(risk1_std),
     rd = sum(risk1_std) - sum(risk0_std),
     rr = sum(risk1_std) / sum(risk0_std)
   )]
-  
+
   return(combined)
+
 }
+
+
 
 
 

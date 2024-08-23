@@ -18,13 +18,13 @@ library(tarchetypes) # Load other packages as needed.
 tar_option_set(
   # Packages that your targets need for their tasks.
   packages = c("tibble", "tidyverse", "readxl", "survival", "rlang", "data.table"),
-  seed = 13049857,
+  seed = 13049857 #,
   # format = "qs", # Optionally set the default storage format. qs is fast.
   # controller = crew::crew_controller_local(workers = 2, seconds_idle = 3),
   # memory = "transient",
   # storage = "worker",
   # retrieval = "worker",
-  garbage_collection = TRUE
+  # garbage_collection = TRUE
 )
 
 # Run the R scripts in the R/ folder with your custom functions:
@@ -35,8 +35,8 @@ tar_source()
 
 # Create the data generation parameters
 treatment_effects <- expand.grid(
-  rr_abortion = c(0.7, 1, 1.5),# c(0.8), #
-  rr_preec = c(0.7, 1) #c(0.8) #
+  rr_abortion = c(0.7, 1, 1.5),
+  rr_preec = c(0.7, 1) 
 ) 
 treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_abortion)), 
@@ -44,7 +44,7 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       ".xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 500
+treatment_effects$n = 10000
 
 
 # Create a dataset with the missing data parameters
@@ -138,10 +138,25 @@ list(
            calculate_risks(data_prep[obs_outcome_mar_mnar == 1], severity_dist) %>% 
             as_tibble()
         ),
-        # Get the risks among all pregnancies using time-to-event methodology
+        # Get the risks among high-severity pregnancies using Aalen-Johansen estimator
+        targets::tar_target(
+          high_sev_aj,
+          calculate_aj_risks_sev(data_prep[severity == 2], severity_dist)
+        ),
+        # Get the risks among moderate severity pregnancies using Aalen-Johansen estimator
+        targets::tar_target(
+          middle_sev_aj,
+          calculate_aj_risks_sev(data_prep[severity == 1], severity_dist)
+        ),
+        # Get the risks among low severity pregnancies using Aalen-Johansen estimator
+        targets::tar_target(
+          low_sev_aj,
+          calculate_aj_risks_sev(data_prep[severity == 0], severity_dist)
+        ),
+        # Get the risks among all pregnancies using the AJ estimator - standardized by severity distribution
         targets::tar_target(
           tte_mar_mnar,
-          calculate_aj_risks(data_prep, severity_dist) %>% 
+          calculate_aj_risks(high_sev_aj, middle_sev_aj, low_sev_aj) %>%
             as_tibble()
         ),
         # Get the risks for the sensitivity analyses
