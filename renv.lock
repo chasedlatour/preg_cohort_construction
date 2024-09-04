@@ -306,14 +306,16 @@
     },
     "cmprsk": {
       "Package": "cmprsk",
-      "Version": "2.2-11",
-      "Source": "Repository",
+      "Version": "2.2-12",
+      "Source": "URL",
       "Repository": "CRAN",
+      "RemoteType": "url",
+      "RemoteUrl": "https://cran.r-project.org/src/contrib/cmprsk_2.2-12.tar.gz",
       "Requirements": [
         "R",
         "survival"
       ],
-      "Hash": "677e2fde792ef6737926f92b9cb804e6"
+      "Hash": "8dfd8210b88fcf04c1400a68a64f15af"
     },
     "codetools": {
       "Package": "codetools",

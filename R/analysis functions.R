@@ -18,28 +18,6 @@
 # tar_data <- tar_read(cohort_data_0_0.7_0.245_.0.2_7_0.7_0.7_Parameters_Abortion07_Preeclampsia07.xlsx_1_10000)
 
 
-# run_analysis <- function(data, rr_abortion, rr_preec, marginal_p_miss_severity,
-#                          beta12, marginal_p_miss_miscarriage, gamma1,
-#                          pnc_wk){
-#   
-#   hold <- prep_data_for_analysis(data, pnc_wk) %>% 
-#     conduct_analysis() %>% 
-#     mutate(
-#       rr_abortion = rr_abortion,
-#       rr_preec = rr_preec,
-#       marginal_p_miss_severity = marginal_p_miss_severity,
-#       beta12 = beta12,
-#       marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-#       gamma1 = gamma1,
-#       pnc_wk = pnc_wk
-#     )
-#   
-#   return(hold)
-#   
-# }
-
-
-
 
 
 #########################################
@@ -230,39 +208,25 @@ calculate_risks <- function(dataset, sev_dist){
 aj_estimator <- function(data_subset) {
   
   # Run the AJ model
-  aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
-  
-  # Extract the summary of the survival fit
-  mod <- summary(aj)
-  
-  # Instead of splitting into separate vectors and then processing, we can use
-  # data.table's vectorized capabilities to work on the whole summary at once
-  trt0_index <- which(mod$strata == "trt=0")
-  trt1_index <- which(mod$strata == "trt=1")
-  
-  # Create a data.table in a single step
-  summod <- data.table(
-    trt = rep(0:1, c(length(trt0_index), length(trt1_index))),
-    t = mod$time,
-    risk = mod$pstate[, 2]
-  )
-  
-  # Since we only need the last risk value for each treatment, use .SD to optimize the selection
-  summod_wide <- summod[, .(risk = risk[.N]), by = trt]
-  
-  # Reshape data to wide format and calculate risk difference and ratio
-  risks <- dcast(summod_wide, . ~ trt, value.var = "risk")
+  # aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
+  aj <- cuminc(ftime = data_subset$time, fstatus = data_subset$outcome, group = data_subset$trt)
+
+  # Extract hte summary of the survival fit
+  trt0_risk <- last(aj$`0 1`$est)
+  trt1_risk <- last(aj$`1 1`$est)
   
   # Calculate risk difference and risk ratio directly
-  risks[, `:=`(
-    risk0 = `0`,
-    risk1 = `1`,
-    rd = `1` - `0`,
-    rr = `1` / `0`
-  )]
+  risks <- data.table(
+    risk0 = trt0_risk,
+    risk1 = trt1_risk,
+    rd = trt1_risk - trt0_risk,
+    rr = trt1_risk / trt0_risk
+  )
   
   return(risks[, .(risk0, risk1, rd, rr)])
 }
+
+
 
 
 
@@ -409,6 +373,44 @@ sensitivity_analysis_risks <- function(data, sev_dist){
 
 
 
+# OLD
+
+# aj_estimator <- function(data_subset) {
+#   
+#   # Run the AJ model
+#   aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
+#   
+#   # Extract the summary of the survival fit
+#   mod <- summary(aj)
+#   
+#   # Instead of splitting into separate vectors and then processing, we can use
+#   # data.table's vectorized capabilities to work on the whole summary at once
+#   trt0_index <- which(mod$strata == "trt=0")
+#   trt1_index <- which(mod$strata == "trt=1")
+#   
+#   # Create a data.table in a single step
+#   summod <- data.table(
+#     trt = rep(0:1, c(length(trt0_index), length(trt1_index))),
+#     t = mod$time,
+#     risk = mod$pstate[, 2]
+#   )
+#   
+#   # Since we only need the last risk value for each treatment, use .SD to optimize the selection
+#   summod_wide <- summod[, .(risk = risk[.N]), by = trt]
+#   
+#   # Reshape data to wide format and calculate risk difference and ratio
+#   risks <- dcast(summod_wide, . ~ trt, value.var = "risk")
+#   
+#   # Calculate risk difference and risk ratio directly
+#   risks[, `:=`(
+#     risk0 = `0`,
+#     risk1 = `1`,
+#     rd = `1` - `0`,
+#     rr = `1` / `0`
+#   )]
+#   
+#   return(risks[, .(risk0, risk1, rd, rr)])
+# }
 
 
 

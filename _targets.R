@@ -17,7 +17,8 @@ library(tarchetypes) # Load other packages as needed.
 # Set target options:
 tar_option_set(
   # Packages that your targets need for their tasks.
-  packages = c("tibble", "tidyverse", "readxl", "survival", "rlang", "data.table"),
+  packages = c("tibble", "tidyverse", "readxl", "survival", "rlang", "data.table",
+               "cmprsk"),
   seed = 13049857 #,
   # format = "qs", # Optionally set the default storage format. qs is fast.
   # controller = crew::crew_controller_local(workers = 2, seconds_idle = 3),
@@ -44,14 +45,19 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       ".xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 10000
+treatment_effects$n = 20000
+
+treatment_effects$param_file <- ifelse(treatment_effects$rr_abortion == 1.5 & 
+                                         treatment_effects$rr_preec == 0.7,
+                                       "Parameters_Abortion15_Preeclampsia07_EMM.xlsx",
+                                       treatment_effects$param_file)
 
 
 # Create a dataset with the missing data parameters
 missing_params <- data.frame(
   marginal_p_miss_severity = 1.13 * c(0, 0.025, 0.05,
                                       0, 0.100, 0.20),
-  beta12 = 0.7,
+  beta12 = 0.8, # 0.7,
   marginal_p_miss_miscarriage = c(4.9 * c(0.05, 0.025, 0,
                                           0.20, 0.100, 0)),
   # Cut it down from 5 so not too large
@@ -116,10 +122,20 @@ list(
           as.data.table(cohort_data) %>% 
             prep_data_for_analysis(pnc_wk = pnc_wk)
         ),
-        # Derive the severity distribution
+        # Derive the severity distribution among all pregnancies
         targets::tar_target(
-          severity_dist,
+          severity_dist_total,
           sev_dist(data_prep)
+        ),
+        # Derive the severity distribution among all outcomes
+        targets::tar_target(
+          severity_dist_outcomes,
+          sev_dist(data_prep[obs_outcome_mar_mnar == 1])
+        ),
+        # Derive the severity distribution among all deliveries
+        targets::tar_target(
+          severity_dist_deliveries,
+          sev_dist(data_prep[obs_delivery_mar_mnar == 1])
         ),
         # Get the risks using the potential outcomes
         targets::tar_target(
@@ -129,29 +145,29 @@ list(
         # Get the risks among the observed deliveries
         targets::tar_target(
           observed_deliveries,
-          calculate_risks(data_prep[obs_delivery_mar_mnar == 1], severity_dist) %>% 
+          calculate_risks(data_prep[obs_delivery_mar_mnar == 1], severity_dist_deliveries) %>% 
             as_tibble()
         ),
         # Get the risks among the pregnancies with observed outcomes
         targets::tar_target(
           observed_outcomes,
-           calculate_risks(data_prep[obs_outcome_mar_mnar == 1], severity_dist) %>% 
+           calculate_risks(data_prep[obs_outcome_mar_mnar == 1], severity_dist_outcomes) %>% 
             as_tibble()
         ),
         # Get the risks among high-severity pregnancies using Aalen-Johansen estimator
         targets::tar_target(
           high_sev_aj,
-          calculate_aj_risks_sev(data_prep[severity == 2], severity_dist)
+          calculate_aj_risks_sev(data_prep[severity == 2], severity_dist_total)
         ),
         # Get the risks among moderate severity pregnancies using Aalen-Johansen estimator
         targets::tar_target(
           middle_sev_aj,
-          calculate_aj_risks_sev(data_prep[severity == 1], severity_dist)
+          calculate_aj_risks_sev(data_prep[severity == 1], severity_dist_total)
         ),
         # Get the risks among low severity pregnancies using Aalen-Johansen estimator
         targets::tar_target(
           low_sev_aj,
-          calculate_aj_risks_sev(data_prep[severity == 0], severity_dist)
+          calculate_aj_risks_sev(data_prep[severity == 0], severity_dist_total)
         ),
         # Get the risks among all pregnancies using the AJ estimator - standardized by severity distribution
         targets::tar_target(
@@ -162,7 +178,7 @@ list(
         # Get the risks for the sensitivity analyses
         targets::tar_target(
           sensitivity_analyses,
-          sensitivity_analysis_risks(data_prep, severity_dist)
+          sensitivity_analysis_risks(data_prep, severity_dist_total)
         ),
         # Get the tibble for all outcomes - Assume that all missing outcomes have an outcome
         targets::tar_target(
@@ -220,7 +236,9 @@ list(
         targets::tar_target(
           analyzed_data,
           tibble(
-            sev_dist = list(severity_dist),
+            sev_dist_all_pregnancies = list(severity_dist_total),
+            sev_dist_observed_outcomes = list(severity_dist_outcomes),
+            sev_dist_observed_deliveries = list(severity_dist_deliveries),
             potential_risks = list(potential_outcomes),
             observed_deliveries = list(observed_deliveries),
             observed_outcomes = list(observed_outcomes),

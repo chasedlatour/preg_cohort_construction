@@ -37,20 +37,6 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
   hold = create_cohort(data, p_sev_beta, marginal_p_miss_miscarriage, 
                        gamma1, pnc_wk)
   
-  # ## Split the data by sim_id to maintain balance within the datasets
-  # split_data <- split(data, data$sim_id)
-  # 
-  # ## Select the observed cohort
-  # hold <- mapply(
-  #   create_cohort,
-  #   split_data, 
-  #   MoreArgs = list(p_sev_beta = p_sev_beta,
-  #                   marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
-  #                   gamma1 = gamma1, 
-  #                   pnc_wk = pnc_wk),
-  #   SIMPLIFY = FALSE
-  # ) %>% bind_rows()
-  
   return(hold)
   
 }
