@@ -36,21 +36,16 @@ tar_source()
 
 # Create the data generation parameters
 treatment_effects <- expand.grid(
-  rr_abortion = c(0.7, 1, 1.5),
-  rr_preec = c(0.7, 1) 
+  rr_abortion = c(0.5, 1, 2),
+  rr_preec = c(0.5, 1) 
 ) 
 treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_abortion)), 
                                       "_Preeclampsia", 
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
-                                      ".xlsx")
+                                      "_EMM.xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 20000
-
-treatment_effects$param_file <- ifelse(treatment_effects$rr_abortion == 1.5 & 
-                                         treatment_effects$rr_preec == 0.7,
-                                       "Parameters_Abortion15_Preeclampsia07_EMM.xlsx",
-                                       treatment_effects$param_file)
+treatment_effects$n = 1000
 
 
 # Create a dataset with the missing data parameters

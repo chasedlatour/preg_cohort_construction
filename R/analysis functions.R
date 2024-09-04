@@ -74,7 +74,8 @@ prep_data_for_analysis <- function(data, pnc_wk){
   
   
   # Add small constant to follow-up time for immediate censors
-  data[, final_pregout_marmnar_tte := fifelse(final_pregout_marmnar_tte == 0, 0.0001, final_pregout_marmnar_tte)]
+  data[, final_pregout_marmnar_tte := fifelse(final_pregout_marmnar_tte == 0, 0.0001,
+                                              final_pregout_marmnar_tte)]
   
   return(data)
 }
