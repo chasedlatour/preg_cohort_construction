@@ -45,14 +45,14 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       "_EMM.xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 1000
+treatment_effects$n = 10000
 
 
 # Create a dataset with the missing data parameters
 missing_params <- data.frame(
   marginal_p_miss_severity = 1.13 * c(0, 0.025, 0.05,
                                       0, 0.100, 0.20),
-  beta12 = 0.8, # 0.7,
+  beta12 = 0.8, 
   marginal_p_miss_miscarriage = c(4.9 * c(0.05, 0.025, 0,
                                           0.20, 0.100, 0)),
   # Cut it down from 5 so not too large
@@ -288,3 +288,18 @@ list(
   
   
 )
+
+
+risks <- dataset %>% 
+  as_tibble() %>% 
+  group_by(trt, severity) %>% 
+  summarize(
+    risk = sum(final_pregout_mar_mnar == 1)  / n()
+  )
+
+all_risks <- tar_data %>% 
+  as_tibble() %>% 
+  group_by(trt, severity) %>% 
+  summarize(
+    risk = sum(preeclampsia_pre_miss == 1) / n()
+  )

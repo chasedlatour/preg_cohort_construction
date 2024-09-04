@@ -186,110 +186,110 @@ create_figure <- function(dataset, parameter, rr_abort, rr_preec){
 # Output Results
 Create kable with description of a specified dataset. Do this for each RR combination.
 
-## $RR_{Abortion} = 0.7, RR_{Preeclampsia} = 0.7$
+## $RR_{Abortion} = 0.5, RR_{Preeclampsia} = 0.5$
 
 ```{r}
     
 describe %>% 
-  filter(rr_abortion == 0.7 & rr_preec == 0.7) %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
   describe_cohorts()
 
 analyses2 %>% 
-  filter(rr_abortion == 0.7 & rr_preec == 0.7) %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
   print_analysis_kable()
 
 # Risks
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Initiators", "0.7", "0.7")
+              "Risk, Initiators", "0.5", "0.5")
 create_figure(figure_data2%>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-                       "Risk, Non-Initiators", "0.7", "0.7")
-create_figure(figure_data2, "Risk Difference", "0.7", "0.7")
-create_figure(figure_data2, "Risk Ratio", "0.7", "0.7")
+                       "Risk, Non-Initiators", "0.5", "0.5")
+create_figure(figure_data2, "Risk Difference", "0.5", "0.5")
+create_figure(figure_data2, "Risk Ratio", "0.5", "0.5")
 
 ```
 
 
-## $RR_{RR_{Abortion} = 1.0, Preeclampsia} = 0.7$
+## $RR_{RR_{Abortion} = 1.0, Preeclampsia} = 0.5$
 
 ```{r}
     
 describe %>% 
-  filter(rr_abortion == 1.0 & rr_preec == 0.7) %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
   describe_cohorts()
 
 analyses2 %>% 
-  filter(rr_abortion == 1.0 & rr_preec == 0.7) %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
   print_analysis_kable()
 
 # Risks
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "1", "0.7")
+              "Risk, Initiators", "1", "0.5")
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Non-Initiators", "1", "0.7")
-create_figure(figure_data2, "Risk Difference", "1", "0.7")
-create_figure(figure_data2, "Risk Ratio", "1", "0.7")
+              "Risk, Non-Initiators", "1", "0.5")
+create_figure(figure_data2, "Risk Difference", "1", "0.5")
+create_figure(figure_data2, "Risk Ratio", "1", "0.5")
 
 ```
 
 
-## $RR_{RR_{Abortion} = 1.5, Preeclampsia} = 0.7$
+## $RR_{RR_{Abortion} = 2.0, Preeclampsia} = 0.5$
 
 ```{r}
     
 describe %>% 
-  filter(rr_abortion == 1.5 & rr_preec == 0.7) %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
   describe_cohorts()
 
 analyses2 %>% 
-  filter(rr_abortion == 1.5 & rr_preec == 0.7) %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
   print_analysis_kable()
 
 # Risks
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "1.5", "0.7")
+              "Risk, Initiators", "2", "0.5")
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Non-Initiators", "1.5", "0.7")
-create_figure(figure_data2, "Risk Difference", "1.5", "0.7")
-create_figure(figure_data2, "Risk Ratio", "1.5", "0.7")
+              "Risk, Non-Initiators", "2", "0.5")
+create_figure(figure_data2, "Risk Difference", "2", "0.5")
+create_figure(figure_data2, "Risk Ratio", "2", "0.5")
 
 ```
 
 
-## $RR_{Abortion} = 0.7, RR_{Preeclampsia} = 1.0$
+## $RR_{Abortion} = 0.5, RR_{Preeclampsia} = 1.0$
 
 ```{r}
     
 describe %>% 
-  filter(rr_abortion == 0.7 & rr_preec == 1.0) %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
   describe_cohorts()
 
 analyses2 %>% 
-  filter(rr_abortion == 0.7 & rr_preec == 1.0) %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
   print_analysis_kable()
 
 # Risks
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "0.7", "1")
+              "Risk, Initiators", "0.5", "1")
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Non-Initiators", "0.7", "1")
-create_figure(figure_data2, "Risk Difference", "0.7", "1")
-create_figure(figure_data2, "Risk Ratio", "0.7", "1")
+              "Risk, Non-Initiators", "0.5", "1")
+create_figure(figure_data2, "Risk Difference", "0.5", "1")
+create_figure(figure_data2, "Risk Ratio", "0.5", "1")
 
 ```
 
@@ -321,28 +321,28 @@ create_figure(figure_data2, "Risk Ratio", "1", "1")
 ```
 
 
-## $RR_{RR_{Abortion} = 1.5, Preeclampsia} = 1.0$
+## $RR_{RR_{Abortion} = 2, Preeclampsia} = 1.0$
 
 ```{r}
     
 describe %>% 
-  filter(rr_abortion == 1.5 & rr_preec == 1.0) %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
   describe_cohorts()
 
 analyses2 %>% 
-  filter(rr_abortion == 1.5 & rr_preec == 1.0) %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
   print_analysis_kable()
 
 # Risks
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "1.5", "1")
+              "Risk, Initiators", "2", "1")
 create_figure(figure_data2 %>% 
                 filter(cohort != "Sens: Trt Pregnancies Outcome" & 
                          cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Non-Initiators", "1.5", "1")
-create_figure(figure_data2, "Risk Difference", "1.5", "1")
-create_figure(figure_data2, "Risk Ratio", "1.5", "1")
+              "Risk, Non-Initiators", "2", "1")
+create_figure(figure_data2, "Risk Difference", "2", "1")
+create_figure(figure_data2, "Risk Ratio", "2", "1")
 
 ```

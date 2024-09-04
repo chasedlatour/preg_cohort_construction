@@ -96,11 +96,19 @@ prep_data_for_analysis <- function(data, pnc_wk){
 sev_dist <- function(data){
   
   # Calculate the distribution of severity using data.table syntax
-  sev_dist <- data[, .(prop = .N / nrow(data)), by = severity]
+  severity_dist <- data[, .(prop = .N / nrow(data)), by = severity]
   
-  return(sev_dist)
+  return(severity_dist)
   
 }
+
+# tar_data <- tar_read(data_prep_0.226_0.8_0_.0.2_7_2_0.5_Parameters_Abortion2_Preeclampsia05_EMM.xlsx_1_10000)
+# 
+# data <- tar_data[obs_outcome_mar_mnar == 1]
+# dataset <- data
+# 
+# sev_dist_outcomes <- tar_read(severity_dist_outcomes_0.226_0.8_0_.0.2_7_2_0.5_Parameters_Abortion2_Preeclampsia05_EMM.xlsx_1_10000)
+# 
 
 
 
@@ -154,15 +162,15 @@ potential_risks <- function(data){
 ##############################################
 
 # Revised so that I can call the outcome variable for calculating risks in the function.
-calculate_risks <- function(dataset, sev_dist){
+calculate_risks <- function(dataset, severity_dist){
   
   # Calculate the risks within strata of treatment and severity using the static variable preeclampsia_pre_miss
   strat_risks <- dataset[, .(
-    risk = sum(preeclampsia_pre_miss) / .N
+    risk = sum(final_pregout_mar_mnar == 1) / .N
   ), by = .(trt, severity)]
   
   # Merge the severity distribution and calculate the standardized risks
-  merge_sev_prop <- merge(strat_risks, sev_dist, by = "severity", all.x = TRUE)
+  merge_sev_prop <- merge(strat_risks, severity_dist, by = "severity", all.x = TRUE)
   
   merge_sev_prop[, std_risk := risk * prop]
   
@@ -252,7 +260,7 @@ aj_estimator <- function(data_subset) {
 
 # First, calculate the risks within each severity strata using an AJ estimator.
 
-calculate_aj_risks_sev <- function(dataset, sev_dist) { 
+calculate_aj_risks_sev <- function(dataset, severity_dist) { 
   
   # dataset is a subset of the original dataset, subset by severity value
 
@@ -269,7 +277,7 @@ calculate_aj_risks_sev <- function(dataset, sev_dist) {
   results[, severity := as.numeric(severity)]
 
   # Left merge the severity distribution onto the risks
-  merge_sev <- merge(results, sev_dist, by = "severity", all.x = TRUE)
+  merge_sev <- merge(results, severity_dist, by = "severity", all.x = TRUE)
 
   merge_sev[, `:=`(
     risk0_std = risk0 * prop,
