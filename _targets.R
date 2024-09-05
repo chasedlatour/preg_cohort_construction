@@ -289,17 +289,3 @@ list(
   
 )
 
-
-risks <- dataset %>% 
-  as_tibble() %>% 
-  group_by(trt, severity) %>% 
-  summarize(
-    risk = sum(final_pregout_mar_mnar == 1)  / n()
-  )
-
-all_risks <- tar_data %>% 
-  as_tibble() %>% 
-  group_by(trt, severity) %>% 
-  summarize(
-    risk = sum(preeclampsia_pre_miss == 1) / n()
-  )
