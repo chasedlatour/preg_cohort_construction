@@ -30,7 +30,6 @@ tar_option_set(
 
 # Run the R scripts in the R/ folder with your custom functions:
 tar_source()
-# tar_source("other_functions.R") # Source other scripts as needed.
 
 
 
@@ -52,7 +51,7 @@ treatment_effects$n = 10000
 missing_params <- data.frame(
   marginal_p_miss_severity = 1.13 * c(0, 0.025, 0.05,
                                       0, 0.100, 0.20),
-  beta12 = 0.8, 
+  beta12 = 5, 
   marginal_p_miss_miscarriage = c(4.9 * c(0.05, 0.025, 0,
                                           0.20, 0.100, 0)),
   # Cut it down from 5 so not too large
@@ -111,7 +110,7 @@ list(
             pnc_wk = pnc_wk
           )
         ),
-        # Prep the data for analysis
+        # Prep the data for analysis - put in data.table structure for speed.
         targets::tar_target(
           data_prep,
           as.data.table(cohort_data) %>% 
@@ -122,12 +121,12 @@ list(
           severity_dist_total,
           sev_dist(data_prep)
         ),
-        # Derive the severity distribution among all outcomes
+        # Derive the severity distribution among all pregnancies with observed outcomes
         targets::tar_target(
           severity_dist_outcomes,
           sev_dist(data_prep[obs_outcome_mar_mnar == 1])
         ),
-        # Derive the severity distribution among all deliveries
+        # Derive the severity distribution among all pregnancies with observed deliveries
         targets::tar_target(
           severity_dist_deliveries,
           sev_dist(data_prep[obs_delivery_mar_mnar == 1])

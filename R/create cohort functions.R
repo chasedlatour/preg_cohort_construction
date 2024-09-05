@@ -8,7 +8,16 @@
 #####################################################
 
 # Testing:
-# tar_data <- tar_read(generated_data_0.8_0.8_Parameters_Abortion08_Preeclampsia08.xlsx_1_10000)
+# tar_data <- tar_read(generated_data_0.5_0.5_Parameters_Abortion05_Preeclampsia05_EMM.xlsx_1_10000)
+# dataset <- tar_data
+# marginal_p_miss_severity <- 0.02825
+# beta12 <- 0.8
+# marginal_p_miss_miscarriage <- 0.1225
+# gamma1 <- -0.2
+
+
+
+
 
 #####################################################
 # FUNCTION: generate_cohort()
@@ -186,7 +195,7 @@ create_cohort <- function(dataset, p_sev_beta,
       # -- - ltfu_sev is not missing and less than or equal to pregout_t_pre_miss, OR
       # -- - ltfu_out is equal to 1
       # Create an indicator just for MAR only and MAR+MNAR.
-      ltfu_mar = ifelse(!is.na(ltfu_sev), # & ltfu_sev <= pregout_t_pre_miss -- Definitionally yes
+      ltfu_mar = ifelse(!is.na(ltfu_sev),
                         "sev",
                         "not"),
       ltfu_mar_mnar = ifelse(!is.na(ltfu_sev), # & ltfu_sev <= pregout_t_pre_miss
@@ -213,23 +222,23 @@ create_cohort <- function(dataset, p_sev_beta,
     mutate(
       
       ## Only missing by severity
-      preeclampsia_mar = ifelse(ltfu_mar != 'not',
-                                0,
-                                preeclampsia_pre_miss),
-      pregout_mar = ifelse(ltfu_mar != 'not',
-                           'unknown',
-                           pregout_pre_miss),
-      pregout_t_mar = ifelse(ltfu_mar != 'not',
-                             t_ltfu_mar,
-                             pregout_t_pre_miss),
+      preeclampsia_mar = ifelse(ltfu_mar == 'not',
+                                preeclampsia_pre_miss,
+                                0),
+      pregout_mar = ifelse(ltfu_mar == 'not',
+                           pregout_pre_miss,
+                           'unknown'),
+      pregout_t_mar = ifelse(ltfu_mar == 'not',
+                             pregout_t_pre_miss,
+                             t_ltfu_mar),
       
       ## Missing by severity and outcome
-      preeclampsia_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
-                                     0,
-                                     preeclampsia_pre_miss),
-      pregout_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
-                                'unknown',
-                                pregout_pre_miss),
+      preeclampsia_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
+                                     preeclampsia_pre_miss,
+                                     0),
+      pregout_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
+                                pregout_pre_miss,
+                                'unknown'),
       pregout_t_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
                                   t_ltfu_mar_mnar,
                                   pregout_t_pre_miss)
@@ -238,8 +247,6 @@ create_cohort <- function(dataset, p_sev_beta,
   return(data2b)
   
 }
-
-
 
 
 

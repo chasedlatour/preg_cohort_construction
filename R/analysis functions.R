@@ -15,8 +15,11 @@
 #####################################################
 
 # Test
-# tar_data <- tar_read(cohort_data_0_0.7_0.245_.0.2_7_0.7_0.7_Parameters_Abortion07_Preeclampsia07.xlsx_1_10000)
-
+# tar_data <- tar_read(cohort_data_0.226_0.8_0_.0.2_7_0.5_0.5_Parameters_Abortion05_Preeclampsia05_EMM.xlsx_1_10000)
+# data <- tar_data %>% 
+#   as.data.table()
+# 
+# data <- tar_read(data_prep_0.226_0.8_0_.0.2_7_0.5_0.5_Parameters_Abortion05_Preeclampsia05_EMM.xlsx_1_10000)
 
 
 
@@ -34,10 +37,14 @@ prep_data_for_analysis <- function(data, pnc_wk){
   data[, `:=`(
     
     # Make indicator variables for observed delivery
-    obs_delivery_mar_mnar = fifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 18, 1, 0),
+    obs_delivery_mar_mnar = fifelse(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 18, 
+                                    1, 
+                                    0),
     
     # Make indicator for observed pregnancy outcome
-    obs_outcome_mar_mnar = fifelse(ltfu_mar_mnar == 'not', 1, 0),
+    obs_outcome_mar_mnar = fifelse(ltfu_mar_mnar == 'not', 
+                                   1, 
+                                   0),
     
     # Outcome indicator - multivariate, important for AJ estimator
     final_pregout_mar_mnar = fcase(
@@ -55,20 +62,25 @@ prep_data_for_analysis <- function(data, pnc_wk){
     ),
     
     # Sensitivity analyses
+    
+    ## Among those LTFU, assume all have an outcome
     preeclampsia_marmnar_immediate_outc_all = fifelse(pregout_mar_mnar == 'unknown', 1, preeclampsia_mar_mnar),
     
+    ## Among those LTFU, assume only the treated have an outcome
     preeclampsia_marmnar_immediate_outc_trt = fcase(
       pregout_mar_mnar == 'unknown' & trt == 1, 1,
       pregout_mar_mnar == 'unknown' & trt == 0, 0,
       pregout_mar_mnar != 'unknown', preeclampsia_mar_mnar
     ),
     
+    ## Among those LTFU, assume only the untreated have an outcome
     preeclampsia_marmnar_immediate_outc_untrt = fcase(
       pregout_mar_mnar == 'unknown' & trt == 0, 1,
       pregout_mar_mnar == 'unknown' & trt == 1, 0,
       pregout_mar_mnar != 'unknown', preeclampsia_mar_mnar
     ),
     
+    ## Among those LTFU, assume that none have an outcome
     preeclampsia_marmnar_no_outc = fifelse(pregout_mar_mnar == 'unknown', 0, preeclampsia_mar_mnar)
   )]
   
@@ -98,17 +110,16 @@ sev_dist <- function(data){
   # Calculate the distribution of severity using data.table syntax
   severity_dist <- data[, .(prop = .N / nrow(data)), by = severity]
   
+  # severity_dist_total <- data[, .(prop = .N / nrow(data)), by = severity]
+  # 
+  # severity_dist_deliveries <- data[obs_delivery_mar_mnar == 1][, .(prop = .N / nrow(data)), by = severity]
+  # dataset <- data[obs_outcome_mar_mnar == 1]
+  # severity_dist_outcomes <- dataset[, .(prop = .N / nrow(dataset)), by = severity]
+  
   return(severity_dist)
   
 }
 
-# tar_data <- tar_read(data_prep_0.226_0.8_0_.0.2_7_2_0.5_Parameters_Abortion2_Preeclampsia05_EMM.xlsx_1_10000)
-# 
-# data <- tar_data[obs_outcome_mar_mnar == 1]
-# dataset <- data
-# 
-# sev_dist_outcomes <- tar_read(severity_dist_outcomes_0.226_0.8_0_.0.2_7_2_0.5_Parameters_Abortion2_Preeclampsia05_EMM.xlsx_1_10000)
-# 
 
 
 
@@ -163,6 +174,8 @@ potential_risks <- function(data){
 
 # Revised so that I can call the outcome variable for calculating risks in the function.
 calculate_risks <- function(dataset, severity_dist){
+  
+  # dataset <- data[obs_outcome_mar_mnar == 1]
   
   # Calculate the risks within strata of treatment and severity using the static variable preeclampsia_pre_miss
   strat_risks <- dataset[, .(
