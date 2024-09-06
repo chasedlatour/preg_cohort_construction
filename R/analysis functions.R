@@ -110,12 +110,6 @@ sev_dist <- function(data){
   # Calculate the distribution of severity using data.table syntax
   severity_dist <- data[, .(prop = .N / nrow(data)), by = severity]
   
-  # severity_dist_total <- data[, .(prop = .N / nrow(data)), by = severity]
-  # 
-  # severity_dist_deliveries <- data[obs_delivery_mar_mnar == 1][, .(prop = .N / nrow(data)), by = severity]
-  # dataset <- data[obs_outcome_mar_mnar == 1]
-  # severity_dist_outcomes <- dataset[, .(prop = .N / nrow(dataset)), by = severity]
-  
   return(severity_dist)
   
 }
@@ -142,7 +136,8 @@ potential_risks <- function(data){
     risk0 = sum(preeclampsia0) / .N,
     risk1 = sum(preeclampsia1) / .N,
     rd = (sum(preeclampsia1) / .N) - (sum(preeclampsia0) / .N),
-    rr = (sum(preeclampsia1) / sum(preeclampsia0))
+    # rr = (sum(preeclampsia1) / sum(preeclampsia0))
+    rr = (sum(preeclampsia1) / .N) / (sum(preeclampsia0) / .N)
   )] %>% 
     as_tibble()
   
@@ -179,7 +174,7 @@ calculate_risks <- function(dataset, severity_dist){
   
   # Calculate the risks within strata of treatment and severity using the static variable preeclampsia_pre_miss
   strat_risks <- dataset[, .(
-    risk = sum(final_pregout_mar_mnar == 1) / .N
+    risk = sum(preeclampsia_pre_miss == 1) / .N
   ), by = .(trt, severity)]
   
   # Merge the severity distribution and calculate the standardized risks
