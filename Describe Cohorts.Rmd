@@ -74,7 +74,7 @@ analyses2 <- analyses %>%
   unnest(c(truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc)) %>% 
   # select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
   mutate(
-    marginal_p_miss_severity = marginal_p_miss_severity / 1.13,
+    marginal_p_miss_severity = marginal_p_miss_severity / 0.3, # / 1.13,
     marginal_p_miss_miscarriage = marginal_p_miss_miscarriage / 4.9
   ) 
 
@@ -165,6 +165,7 @@ create_figure <- function(dataset, parameter, rr_abort, rr_preec){
   rr_preeclampsia <- sym(rr_preec)
   
   plot <- dataset %>%
+    filter(!grepl("Sens", cohort)) %>% 
     filter(rr_abortion == rr_abort & rr_preec == rr_preeclampsia) %>%
     filter(parameter == param) %>% 
     ggplot(aes(x = missing, y = value, color = cohort)) + # , shape = cohort

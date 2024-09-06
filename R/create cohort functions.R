@@ -30,20 +30,8 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
                             marginal_p_miss_miscarriage, gamma1,
                             pnc_wk){
   
-  # Get the expected value of severity in the missing cohort
-  ## Distribution of severity at baseline : 1/3, 1/3, 1/3
-  ## P(Trt|Severity) : 0.4, 0.5, 0.6
-  ## Expected distribution of severity among untreated: 4/15 = low, 5/15 = med, 6/15 = high
-  ## Manually calculated based upon the values above.
-  expected_sev = (4/15*0) + (5/15*1) + (6/15*2)
-  
-  ## Balancing intercept for model
-  b0_sev = -log((1/marginal_p_miss_severity)-1) - (beta12 * expected_sev)
-  
-  # Create p_sev_beta - for logistic regression to determine LTFU due to severity
-  p_sev_beta = c(b0_sev, beta12, 2*beta12)
-  
-  hold = create_cohort(data, p_sev_beta, marginal_p_miss_miscarriage, 
+  hold = create_cohort(data, marginal_p_miss_severity, beta12,
+                       marginal_p_miss_miscarriage, 
                        gamma1, pnc_wk)
   
   return(hold)
@@ -51,7 +39,30 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
 }
 
 
-
+# generate_cohort <- function(data, marginal_p_miss_severity, beta12, 
+#                             marginal_p_miss_miscarriage, gamma1,
+#                             pnc_wk){
+#   
+#   # Get the expected value of severity in the missing cohort
+#   ## Distribution of severity at baseline : 1/3, 1/3, 1/3
+#   ## P(Trt|Severity) : 0.4, 0.5, 0.6
+#   ## Expected distribution of severity among untreated: 4/15 = low, 5/15 = med, 6/15 = high
+#   ## Manually calculated based upon the values above.
+#   expected_sev = (4/15*0) + (5/15*1) + (6/15*2)
+#   
+#   ## Balancing intercept for model
+#   b0_sev = -log((1/marginal_p_miss_severity)-1) - (beta12 * expected_sev)
+#   
+#   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
+#   p_sev_beta = c(b0_sev, beta12, 2*beta12)
+#   
+#   hold = create_cohort(data, p_sev_beta, 
+#                        marginal_p_miss_miscarriage, 
+#                        gamma1, pnc_wk)
+#   
+#   return(hold)
+#   
+# }
 
 
 
@@ -74,14 +85,12 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
 #   logistic regression based upon preg outcome
 #####################################################
 
-create_cohort <- function(dataset, p_sev_beta, 
-                          marginal_p_miss_miscarriage, gamma1, pnc_wk){
-  
-  # Get the probabilities associated with the betas for each
-  # severity level - calculated via logistic regression
-  p_missing_sev = c(logodds_to_p(p_sev_beta[1]),
-                    logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
-                    logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
+
+
+
+create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
+                          marginal_p_miss_miscarriage, 
+                          gamma1, pnc_wk){
   
   # Create all the potential outcomes and revise the prenatal care encounters
   data = dataset %>% # all_outcomes %>%#  
@@ -133,12 +142,45 @@ create_cohort <- function(dataset, p_sev_beta,
     ) 
   
   
-  ## Calculate the betas for the missingness due to miscarriage.
+  ## Calculate the betas for the missingness due to severity.
   ## Because this is a single simulation and not a full Monte Carlo simulation, this average 
   ## is based upon the observed data. In a multi-repetition simulation, we would calculate
   ## this in a large cohort and use that value.
   ## Because the seed is maintained and this is only calculated among the non-initiators, this 
   ## should be the same for all
+  
+  # Get the expected value of severity in the missing cohort
+  expected_sev = as.double(subset(data, trt == 0) %>% 
+                             ungroup() %>% 
+                             summarize(avg = mean(severity)))
+  
+  # sev_dist <- subset(data, trt == 0) %>% 
+  #   group_by(severity) %>% 
+  #   summarize(prop = n() / nrow(subset(data, trt == 0)))
+  
+  # # Get the expected proportion of moderate severity in the untreated cohort
+  # n_moderate = nrow(subset(data, trt == 0 & severity == 1))
+  # expected_med_sev = as.double(n_moderate / nrow(data))
+  # 
+  # # Get the expected proportion of high severity in the untreated cohort
+  # n_high = nrow(subset(data, trt == 0 & severity == 2))
+  # expected_high_sev = as.double(n_high / nrow(data))
+
+  ## Calculate intercept using balancing intercept for model
+  b0_sev = -log((1/marginal_p_miss_severity)-1) - (beta12 * expected_sev)
+  # b0_sev = -log((1/marginal_p_miss_severity)-1) - (beta12 * expected_med_sev) - (2 * beta12 * expected_high_sev)
+  
+  # Create p_sev_beta - for logistic regression to determine LTFU due to severity
+  p_sev_beta = c(b0_sev, beta12, 2*beta12)
+  
+  # Get the probabilities associated with the betas for each
+  # severity level - calculated via logistic regression
+  p_missing_sev = c(logodds_to_p(p_sev_beta[1]),
+                    logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
+                    logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
+  
+  ## Calculate the betas for the missingness due to miscarriage.
+  ## Same logic as missingness due to severity.
   expected_ga_miscarriages = as.double(subset(data, trt == 0 & pregout_t_pre_miss < 18) %>% 
                                          ungroup() %>% 
                                          summarize(avg = mean(pregout_t_pre_miss)))
@@ -247,6 +289,180 @@ create_cohort <- function(dataset, p_sev_beta,
   return(data2b)
   
 }
+
+# create_cohort <- function(dataset, p_sev_beta,
+#                           marginal_p_miss_miscarriage, gamma1, pnc_wk){
+#   
+#   # Get the probabilities associated with the betas for each
+#   # severity level - calculated via logistic regression
+#   p_missing_sev = c(logodds_to_p(p_sev_beta[1]),
+#                     logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
+#                     logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
+#   
+#   # Create all the potential outcomes and revise the prenatal care encounters
+#   data = dataset %>% # all_outcomes %>%#  
+#     dplyr::mutate(
+#       
+#       ######################################
+#       ### Untreated Potential Outcomes
+#       
+#       untreated_po = pmap(list(preg_outcomes_untrt, 
+#                                preec_outcomes_untrt,
+#                                revised_preg, 
+#                                pnc_wk),
+#                           untreated_outcomes),
+#       
+#       ######################################
+#       ### Treated Potential Outcomes
+#       
+#       treated_po = pmap(list(preg_outcomes_trt, 
+#                              preec_outcomes_trt, 
+#                              revised_preg, 
+#                              pnc_wk),
+#                         treated_outcomes), 
+#       
+#       ######################################
+#       ### Prenatal Encounters
+#       ### Identify prenatal encounters after
+#       ### the first.
+#       
+#       pnc_enc_rev = pmap(list(pnc_enc, 
+#                               pnc_wk),
+#                          revise_pnc) 
+#       
+#     ) %>% 
+#     unnest_wider(c(untreated_po, treated_po)) %>% 
+#     filter(include == 1) %>% 
+#     # Assign treatment -- Wait until after filter to those who are included in the sample
+#     mutate(trt = rbinom(n = length(p_trt), size = 1, prob = p_trt)) %>% 
+#     # Create variables for the observed outcomes - ignore missingness at this stage
+#     mutate(
+#       preeclampsia_pre_miss = ifelse(trt == 0,
+#                                      preeclampsia0,
+#                                      preeclampsia1),
+#       pregout_pre_miss = ifelse(trt == 0,
+#                                 final_preg0,
+#                                 final_preg1),
+#       pregout_t_pre_miss = ifelse(trt == 0,
+#                                   final_preg0_t,
+#                                   final_preg1_t)
+#     ) 
+#   
+#   
+#   ## Calculate the betas for the missingness due to miscarriage.
+#   ## Because this is a single simulation and not a full Monte Carlo simulation, this average 
+#   ## is based upon the observed data. In a multi-repetition simulation, we would calculate
+#   ## this in a large cohort and use that value.
+#   ## Because the seed is maintained and this is only calculated among the non-initiators, this 
+#   ## should be the same for all
+#   expected_ga_miscarriages = as.double(subset(data, trt == 0 & pregout_t_pre_miss < 18) %>% 
+#                                          ungroup() %>% 
+#                                          summarize(avg = mean(pregout_t_pre_miss)))
+#   # Balancing intercept term
+#   gamma0 = -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
+#   
+#   ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
+#   ## This is the vector of beta values
+#   p_miss_outcome = c(gamma0, 
+#                      gamma1)
+#   
+#   # Finally, incorporate/create the missing outcomes
+#   data2b = data %>% 
+#     # Now determine if missing outcome based upon outcome and gw of outcome
+#     mutate(
+#       
+#       ######################################
+#       ## LTFU by Severity
+#       
+#       # Generate missingness probabilities for each person
+#       p_missing_by_sev = p_missing_sev[severity+1],
+#       
+#       # Determine if someone was missing due to severity
+#       missing_by_sev = rbinom(n = length(p_missing_by_sev), size = 1, prob = p_missing_by_sev),
+#       
+#       # Determine when the person was LTFU due to severity
+#       ltfu_sev = runif(n = length(missing_by_sev), min = pnc_wk, max = pregout_t_pre_miss),
+#       
+#       ## Make missing if not actually LTFU due to severity
+#       ltfu_sev = ifelse(missing_by_sev == 1,
+#                         ltfu_sev,
+#                         NA),
+#       
+#       ######################################
+#       ## LTFU by Outcome
+#       
+#       # Calculate the probability that missing due to outcome
+#       p_out_ltfu = ifelse(pregout_pre_miss == 'fetaldeath' & 
+#                             pregout_t_pre_miss < 18, # Abortion definition
+#                           logodds_to_p(p_miss_outcome[1] + 
+#                                          (pregout_t_pre_miss * 
+#                                             p_miss_outcome[2])),
+#                           0),
+#       
+#       # Determine if they were LTFU due to the true pregnancy outcome
+#       ltfu_out = rbinom(n = length(p_out_ltfu), size = 1, prob = p_out_ltfu)
+#       
+#     ) %>% 
+#     # Create the observed outcomes, incorporating missing data
+#     mutate(
+#       
+#       ## Create an indicator variable for if the person was LTFU and how
+#       # -- This would occur if either:
+#       # -- - ltfu_sev is not missing and less than or equal to pregout_t_pre_miss, OR
+#       # -- - ltfu_out is equal to 1
+#       # Create an indicator just for MAR only and MAR+MNAR.
+#       ltfu_mar = ifelse(!is.na(ltfu_sev),
+#                         "sev",
+#                         "not"),
+#       ltfu_mar_mnar = ifelse(!is.na(ltfu_sev), # & ltfu_sev <= pregout_t_pre_miss
+#                              "sev",
+#                              ifelse(ltfu_out == 1,
+#                                     "out",
+#                                     "not")),
+#       
+#       # Now determine timing when LTFU
+#       t_ltfu_mar = pmap_dbl(list(pnc_enc_rev,
+#                                  ltfu_mar,
+#                                  41,
+#                                  ltfu_sev), # Just set as a constant-ignoring missing due to outcome
+#                             pnc_miss),
+#       
+#       t_ltfu_mar_mnar = pmap_dbl(list(pnc_enc_rev,
+#                                       ltfu_mar_mnar,
+#                                       pregout_t_pre_miss,
+#                                       ltfu_sev),
+#                                  pnc_miss)
+#       
+#     ) %>%
+#     # Finally, create their observed outcomes, incorporating the LTFU
+#     mutate(
+#       
+#       ## Only missing by severity
+#       preeclampsia_mar = ifelse(ltfu_mar == 'not',
+#                                 preeclampsia_pre_miss,
+#                                 0),
+#       pregout_mar = ifelse(ltfu_mar == 'not',
+#                            pregout_pre_miss,
+#                            'unknown'),
+#       pregout_t_mar = ifelse(ltfu_mar == 'not',
+#                              pregout_t_pre_miss,
+#                              t_ltfu_mar),
+#       
+#       ## Missing by severity and outcome
+#       preeclampsia_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
+#                                      preeclampsia_pre_miss,
+#                                      0),
+#       pregout_mar_mnar = ifelse(ltfu_mar_mnar == 'not',
+#                                 pregout_pre_miss,
+#                                 'unknown'),
+#       pregout_t_mar_mnar = ifelse(ltfu_mar_mnar != 'not',
+#                                   t_ltfu_mar_mnar,
+#                                   pregout_t_pre_miss)
+#     )
+#   
+#   return(data2b)
+#   
+# }
 
 
 
@@ -550,7 +766,7 @@ pnc_miss <- function(pnc_enc, ltfu_ind, t_preg_out, t_sev){
 logodds_to_p <- function(logodds){
   
   p <- exp(logodds)/(1 + exp(logodds))
-  
+
   return(p)
   
 }

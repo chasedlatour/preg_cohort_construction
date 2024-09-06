@@ -136,7 +136,6 @@ potential_risks <- function(data){
     risk0 = sum(preeclampsia0) / .N,
     risk1 = sum(preeclampsia1) / .N,
     rd = (sum(preeclampsia1) / .N) - (sum(preeclampsia0) / .N),
-    # rr = (sum(preeclampsia1) / sum(preeclampsia0))
     rr = (sum(preeclampsia1) / .N) / (sum(preeclampsia0) / .N)
   )] %>% 
     as_tibble()
@@ -170,7 +169,7 @@ potential_risks <- function(data){
 # Revised so that I can call the outcome variable for calculating risks in the function.
 calculate_risks <- function(dataset, severity_dist){
   
-  # dataset <- data[obs_outcome_mar_mnar == 1]
+  # dataset <- tar_data[obs_outcome_mar_mnar == 1]
   
   # Calculate the risks within strata of treatment and severity using the static variable preeclampsia_pre_miss
   strat_risks <- dataset[, .(
