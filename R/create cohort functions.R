@@ -13,7 +13,7 @@
 # data <- tar_data
 # marginal_p_miss_severity <- 0.02825
 # beta12 <- 0.8
-# marginal_p_miss_miscarriage <- 0.1225
+# marginal_p_miss_miscarriage <- 0 #0.1225
 # gamma1 <- -0.2
 
 
@@ -222,10 +222,10 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
       # -- - ltfu_sev is not missing and less than or equal to pregout_t_pre_miss, OR
       # -- - ltfu_out is equal to 1
       # Create an indicator just for MAR only and MAR+MNAR.
-      ltfu_mar = ifelse(!is.na(ltfu_sev),
+      ltfu_mar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss,
                         "sev",
                         "not"),
-      ltfu_mar_mnar = ifelse(!is.na(ltfu_sev), # & ltfu_sev <= pregout_t_pre_miss
+      ltfu_mar_mnar = ifelse(!is.na(ltfu_sev) & ltfu_sev <= pregout_t_pre_miss, # & ltfu_sev <= pregout_t_pre_miss
                              "sev",
                              ifelse(ltfu_out == 1,
                                     "out",
