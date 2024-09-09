@@ -49,11 +49,11 @@ treatment_effects$n = 15000
 
 # Create a dataset with the missing data parameters
 missing_params <- data.frame(
-  marginal_p_miss_severity = 0.8 * c(0, 0.025, 0.05,
+  marginal_p_miss_severity = c(0, 0.025, 0.05,
                                       0, 0.100, 0.20),
   # marginal_p_miss_severity = c(0, 0.025, 0.05,
   #                              0, 0.100, 0.20) * 0.3,
-  beta12 = 1.1, #2.55, 
+  beta12 = 1.3, #2.55, 
   marginal_p_miss_miscarriage = c(4.9 * c(0.05, 0.025, 0,
                                           0.20, 0.100, 0)),
   # Cut it down from 5 so not too large

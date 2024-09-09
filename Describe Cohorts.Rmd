@@ -74,7 +74,7 @@ analyses2 <- analyses %>%
   unnest(c(truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc)) %>% 
   # select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
   mutate(
-    marginal_p_miss_severity = marginal_p_miss_severity / 0.8, #1.13,
+    marginal_p_miss_severity = marginal_p_miss_severity, #1.13,
     marginal_p_miss_miscarriage = marginal_p_miss_miscarriage / 4.9
   ) 
 
