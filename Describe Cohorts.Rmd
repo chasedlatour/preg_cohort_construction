@@ -37,7 +37,6 @@ Make a function that outputs a table describing a DGM
 
 ```{r}
 
-describe_subset <- subset(describe, rr_abortion == 0.5, rr_preec = 0.5)
 
 describe_cohorts <- function(describe_subset){
   

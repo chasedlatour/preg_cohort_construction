@@ -37,7 +37,6 @@ Make a function that outputs a table describing a DGM
 
 ```{r}
 
-describe_subset <- subset(describe, rr_abortion == 0.5, rr_preec = 0.5)
 
 describe_cohorts <- function(describe_subset){
   
@@ -50,14 +49,6 @@ describe_cohorts <- function(describe_subset){
     collapse_rows(col_names = c(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage),
                   valign = "top") %>%
     kable_classic()
-  
-  # hold <- describe_subset %>% 
-  #   select(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage,
-  #          trt, n_low:missing_mnar_t) %>% 
-  #   kbl() %>%
-  #   collapse_rows(col_names = c(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage),
-  #                 valign = "top") %>%
-  #   kable_classic()
   
   return(hold)
   
@@ -90,12 +81,15 @@ analyses2 <- analyses %>%
     marginal_p_miss_miscarriage = marginal_p_miss_miscarriage / 4.9
   ) 
 
-# Now, output a kable
-print_analysis_kable <- function(data_subset){
+
+print_analysis_kable_del <- function(data_subset){
   
   hold <- data_subset %>% 
     mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           truth_risk0, truth_risk1, truth_rd, truth_rr,
+           obs_del_risk0, obs_del_risk1, obs_del_rd, obs_del_rr) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -106,23 +100,251 @@ print_analysis_kable <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 8)
+      "$$RR$$" = 1), 2)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
       "Truth" = 4,
-      "Observed Deliveries" = 4,
-      "Observed Outcomes" = 4,
-      "All Pregnancies" = 4,
-      "All Pregnancies, Assuming All Censored had Outcome" = 4,
-      "All Pregnancies, Assuming Treated had Outcome" = 4,
-      "All Pregnancies, Assumine Untreated had Outcome" = 4,
+      "Observed Deliveries" = 4 #,
+      # "Observed Outcomes" = 4,
+      # "All Pregnancies" = 4,
+      # "All Pregnancies, Assuming All Censored had Outcome" = 4,
+      # "All Pregnancies, Assuming Treated had Outcome" = 4,
+      # "All Pregnancies, Assumine Untreated had Outcome" = 4,
+      # "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+    ))
+  
+  return(hold)
+  
+}
+
+
+print_analysis_kable_outc <- function(data_subset){
+  
+  hold <- data_subset %>% 
+    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    select(!c(rr_abortion, rr_preec)) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           truth_risk0, truth_risk1, truth_rd, truth_rr,
+           obs_out_risk0, obs_out_risk1, obs_out_rd, obs_out_rr) %>% 
+    kbl(col.names = NA) %>% # 
+    collapse_rows(columns = 1:2,
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(c(
+      "Prob Missing Due to Severity" = 1,
+      "Prob Missing Due to Abortion" = 1,
+      rep(c("$$Risk_0$$" = 1,
+      "$$Risk_1$$" = 1,
+      "$$RD$$" = 1,
+      "$$RR$$" = 1), 2)# 8)
+    )) %>% 
+    add_header_above(c(
+      " " = 2,
+      "Truth" = 4,
+      # "Observed Deliveries" = 4 #,
+      "Observed Outcomes" = 4 #,
+      # "All Pregnancies" = 4,
+      # "All Pregnancies, Assuming All Censored had Outcome" = 4,
+      # "All Pregnancies, Assuming Treated had Outcome" = 4,
+      # "All Pregnancies, Assumine Untreated had Outcome" = 4,
+      # "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+    ))
+  
+  return(hold)
+  
+}
+
+
+print_analysis_kable_all <- function(data_subset){
+  
+  hold <- data_subset %>% 
+    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    select(!c(rr_abortion, rr_preec)) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           truth_risk0, truth_risk1, truth_rd, truth_rr,
+           all_preg_risk0, all_preg_risk1, all_preg_rd, all_preg_rr) %>% 
+    kbl(col.names = NA) %>% # 
+    collapse_rows(columns = 1:2,
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(c(
+      "Prob Missing Due to Severity" = 1,
+      "Prob Missing Due to Abortion" = 1,
+      rep(c("$$Risk_0$$" = 1,
+      "$$Risk_1$$" = 1,
+      "$$RD$$" = 1,
+      "$$RR$$" = 1), 2)# 8)
+    )) %>% 
+    add_header_above(c(
+      " " = 2,
+      "Truth" = 4,
+      # "Observed Deliveries" = 4 #,
+      # "Observed Outcomes" = 4 #,
+      "All Pregnancies" = 4 #,
+      # "All Pregnancies, Assuming All Censored had Outcome" = 4,
+      # "All Pregnancies, Assuming Treated had Outcome" = 4,
+      # "All Pregnancies, Assuming Untreated had Outcome" = 4,
+      # "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+    ))
+  
+  return(hold)
+  
+}
+
+
+print_analysis_kable_all_outc <- function(data_subset){
+  
+  hold <- data_subset %>% 
+    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    select(!c(rr_abortion, rr_preec)) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           truth_risk0, truth_risk1, truth_rd, truth_rr,
+           all_preg_all_outc_risk0, all_preg_all_outc_risk1, all_preg_all_outc_rd, all_preg_all_outc_rr) %>% 
+    kbl(col.names = NA) %>% # 
+    collapse_rows(columns = 1:2,
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(c(
+      "Prob Missing Due to Severity" = 1,
+      "Prob Missing Due to Abortion" = 1,
+      rep(c("$$Risk_0$$" = 1,
+      "$$Risk_1$$" = 1,
+      "$$RD$$" = 1,
+      "$$RR$$" = 1), 2)# 8)
+    )) %>% 
+    add_header_above(c(
+      " " = 2,
+      "Truth" = 4,
+      # "Observed Deliveries" = 4 #,
+      # "Observed Outcomes" = 4 #,
+      # "All Pregnancies" = 4 #,
+      "All Pregnancies, Assuming All Censored had Outcome" = 4 #,
+      # "All Pregnancies, Assuming Treated had Outcome" = 4,
+      # "All Pregnancies, Assuming Untreated had Outcome" = 4,
+      # "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+    ))
+  
+  return(hold)
+  
+}
+
+
+print_analysis_kable_trt_outc <- function(data_subset){
+  
+  hold <- data_subset %>% 
+    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    select(!c(rr_abortion, rr_preec)) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           truth_risk0, truth_risk1, truth_rd, truth_rr,
+           trt_preg_outc_risk0, trt_preg_outc_risk1, trt_preg_outc_rd, trt_preg_outc_rr) %>% 
+    kbl(col.names = NA) %>% # 
+    collapse_rows(columns = 1:2,
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(c(
+      "Prob Missing Due to Severity" = 1,
+      "Prob Missing Due to Abortion" = 1,
+      rep(c("$$Risk_0$$" = 1,
+      "$$Risk_1$$" = 1,
+      "$$RD$$" = 1,
+      "$$RR$$" = 1), 2)# 8)
+    )) %>% 
+    add_header_above(c(
+      " " = 2,
+      "Truth" = 4,
+      # "Observed Deliveries" = 4 #,
+      # "Observed Outcomes" = 4 #,
+      # "All Pregnancies" = 4 #,
+      # "All Pregnancies, Assuming All Censored had Outcome" = 4 #,
+      "All Pregnancies, Assuming Treated had Outcome" = 4 #,
+      # "All Pregnancies, Assuming Untreated had Outcome" = 4,
+      # "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+    ))
+  
+  return(hold)
+  
+}
+
+
+
+print_analysis_kable_untrt_outc <- function(data_subset){
+  
+  hold <- data_subset %>% 
+    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    select(!c(rr_abortion, rr_preec)) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           truth_risk0, truth_risk1, truth_rd, truth_rr,
+           untrt_preg_outc_risk0, untrt_preg_outc_risk1, untrt_preg_outc_rd, untrt_preg_outc_rr) %>% 
+    kbl(col.names = NA) %>% # 
+    collapse_rows(columns = 1:2,
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(c(
+      "Prob Missing Due to Severity" = 1,
+      "Prob Missing Due to Abortion" = 1,
+      rep(c("$$Risk_0$$" = 1,
+      "$$Risk_1$$" = 1,
+      "$$RD$$" = 1,
+      "$$RR$$" = 1), 2)# 8)
+    )) %>% 
+    add_header_above(c(
+      " " = 2,
+      "Truth" = 4,
+      # "Observed Deliveries" = 4 #,
+      # "Observed Outcomes" = 4 #,
+      # "All Pregnancies" = 4 #,
+      # "All Pregnancies, Assuming All Censored had Outcome" = 4 #,
+      # "All Pregnancies, Assuming Treated had Outcome" = 4 #,
+      "All Pregnancies, Assuming Untreated had Outcome" = 4 #,
+      # "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+    ))
+  
+  return(hold)
+  
+}
+
+
+
+
+print_analysis_kable_no_outc <- function(data_subset){
+  
+  hold <- data_subset %>% 
+    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    select(!c(rr_abortion, rr_preec)) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           truth_risk0, truth_risk1, truth_rd, truth_rr,
+           all_preg_no_outc_risk0, all_preg_no_outc_risk1, all_preg_no_outc_rd, all_preg_no_outc_rr) %>% 
+    kbl(col.names = NA) %>% # 
+    collapse_rows(columns = 1:2,
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(c(
+      "Prob Missing Due to Severity" = 1,
+      "Prob Missing Due to Abortion" = 1,
+      rep(c("$$Risk_0$$" = 1,
+      "$$Risk_1$$" = 1,
+      "$$RD$$" = 1,
+      "$$RR$$" = 1), 2)# 8)
+    )) %>% 
+    add_header_above(c(
+      " " = 2,
+      "Truth" = 4,
+      # "Observed Deliveries" = 4 #,
+      # "Observed Outcomes" = 4 #,
+      # "All Pregnancies" = 4 #,
+      # "All Pregnancies, Assuming All Censored had Outcome" = 4 #,
+      # "All Pregnancies, Assuming Treated had Outcome" = 4 #,
+      # "All Pregnancies, Assuming Untreated had Outcome" = 4 #,
       "All Pregnancies, Assuming All Censored did not have Outcome" = 4
     ))
   
   return(hold)
   
 }
+
+
+
 
 
 ```
@@ -140,7 +362,7 @@ figure_data <- analyses2 %>%
     values_to = "value"
   ) %>% 
   mutate(
-    cohort = case_when(grepl("truth", estimate) ~ "Truth",
+    Cohort = case_when(grepl("truth", estimate) ~ "Truth",
                        grepl("obs_del", estimate) ~ "Observed Deliveries",
                        grepl("obs_out", estimate) ~ "Observed Outcomes",
                        grepl("all_preg_all_outc", estimate) ~ "Sens: All Pregnancies Outcome",
@@ -159,44 +381,85 @@ figure_data <- analyses2 %>%
   )
 
 truths <- figure_data %>% 
-  filter(cohort == "Truth") %>% 
+  filter(Cohort == "Truth") %>% 
   rename(truth = value) %>% 
   select(rr_abortion, rr_preec, missing, parameter, truth)
 
 estimates <- figure_data %>% 
-  filter(cohort != "Truth")
+  filter(Cohort != "Truth")
 
 figure_data2 <- left_join(estimates, truths, by = c("rr_abortion", "rr_preec",
-                                                    "missing", "parameter"))
+                                                    "missing", "parameter")) %>% 
+  mutate(
+    scenario = case_when(
+      rr_abortion == 0.5 ~ "Initiation decreases risk of miscarriage",
+      rr_abortion == 1.0 ~ "Initiation does not affect risk of miscarriage",
+      rr_abortion == 2.0 ~ "Initiation increases risk of miscarriage"
+    )
+  )
 
 
-create_figure <- function(dataset, parameter, rr_abort, rr_preec){
+create_figure_nosens <- function(dataset, parameter, rr_preec, title){
   
   param <- sym(parameter)
-  rr_abort <- sym(rr_abort)
+  # rr_abort <- sym(rr_abort)
   rr_preeclampsia <- sym(rr_preec)
   
   plot <- dataset %>%
-    filter(!grepl("Sens", cohort)) %>% 
-    filter(rr_abortion == rr_abort & rr_preec == rr_preeclampsia) %>%
+    filter(!grepl("Sens", Cohort)) %>% 
+    filter(rr_preec == rr_preeclampsia) %>%
     filter(parameter == param) %>% 
-    ggplot(aes(x = missing, y = value, color = cohort)) + # , shape = cohort
+    ggplot(aes(x = missing, y = value, color = Cohort, shape = Cohort)) + # , shape = cohort
     geom_point(size = 3, position = position_dodge(0.5)) +
-    facet_wrap(parameter ~., ncol = 1) +
+    facet_wrap(scenario ~., nrow = 1) +
     geom_hline(aes(yintercept = truth), col = "red", linetype = "dashed") + 
-    ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abort) ~ 
-                   " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
+    # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
+    #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
     xlab("Approximate Percent Missing Due to Severity/Abortion") + 
-    ylab("Parameter Estimate")
+    ylab("Parameter Estimate") +
+    ggtitle(parameter)
   
   return(plot)
   
 }
 
+
+
+
+create_figure_sens <- function(dataset, parameter, rr_preec, title){
+  
+  param <- sym(parameter)
+  # rr_abort <- sym(rr_abort)
+  rr_preeclampsia <- sym(rr_preec)
+  
+  plot <- dataset %>%
+    # filter(!grepl("Sens", Cohort)) %>% 
+    mutate(Analysis = ifelse(grepl("Sens", Cohort),
+                             "Sensitivity Analysis",
+                             "Primary Analysis")) %>% 
+    filter(rr_preec == rr_preeclampsia) %>%
+    filter(parameter == param) %>% 
+    ggplot(aes(x = missing, y = value, color = Cohort, shape = Analysis)) + # , shape = cohort
+    geom_point(size = 3, position = position_dodge(0.5)) +
+    facet_wrap(scenario ~., nrow = 1) +
+    geom_hline(aes(yintercept = truth), col = "red", linetype = "dashed") + 
+    # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
+    #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
+    xlab("Approximate Percent Missing Due to Severity/Abortion") + 
+    ylab("Parameter Estimate") +
+    ggtitle(parameter)
+  
+  return(plot)
+  
+}
+
+
+
+
 ```
 
 
-# Output Results
+# Output Tabular Results
 Create kable with description of a specified dataset. Do this for each RR combination.
 
 ## $RR_{Abortion} = 0.5, RR_{Preeclampsia} = 0.5$
@@ -209,19 +472,33 @@ describe %>%
 
 analyses2 %>% 
   filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
-  print_analysis_kable()
+  print_analysis_kable_del()
 
-# Risks
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Initiators", "0.5", "0.5")
-create_figure(figure_data2%>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-                       "Risk, Non-Initiators", "0.5", "0.5")
-create_figure(figure_data2, "Risk Difference", "0.5", "0.5")
-create_figure(figure_data2, "Risk Ratio", "0.5", "0.5")
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
+  print_analysis_kable_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
+  print_analysis_kable_all()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
+  print_analysis_kable_all_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
+  print_analysis_kable_trt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
+  print_analysis_kable_untrt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
+  print_analysis_kable_no_outc()
+
+
 
 ```
 
@@ -236,19 +513,31 @@ describe %>%
 
 analyses2 %>% 
   filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
-  print_analysis_kable()
+  print_analysis_kable_del()
 
-# Risks
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "1", "0.5")
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Non-Initiators", "1", "0.5")
-create_figure(figure_data2, "Risk Difference", "1", "0.5")
-create_figure(figure_data2, "Risk Ratio", "1", "0.5")
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
+  print_analysis_kable_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
+  print_analysis_kable_all()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
+  print_analysis_kable_all_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
+  print_analysis_kable_trt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
+  print_analysis_kable_untrt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
+  print_analysis_kable_no_outc()
 
 ```
 
@@ -263,19 +552,31 @@ describe %>%
 
 analyses2 %>% 
   filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
-  print_analysis_kable()
+  print_analysis_kable_del()
 
-# Risks
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "2", "0.5")
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Non-Initiators", "2", "0.5")
-create_figure(figure_data2, "Risk Difference", "2", "0.5")
-create_figure(figure_data2, "Risk Ratio", "2", "0.5")
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
+  print_analysis_kable_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
+  print_analysis_kable_all()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
+  print_analysis_kable_all_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
+  print_analysis_kable_trt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
+  print_analysis_kable_untrt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
+  print_analysis_kable_no_outc()
 
 ```
 
@@ -290,19 +591,33 @@ describe %>%
 
 analyses2 %>% 
   filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
-  print_analysis_kable()
+  print_analysis_kable_del()
 
-# Risks
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "0.5", "1")
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Non-Initiators", "0.5", "1")
-create_figure(figure_data2, "Risk Difference", "0.5", "1")
-create_figure(figure_data2, "Risk Ratio", "0.5", "1")
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
+  print_analysis_kable_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
+  print_analysis_kable_all()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
+  print_analysis_kable_all_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
+  print_analysis_kable_trt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
+  print_analysis_kable_untrt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
+  print_analysis_kable_no_outc()
+
+
 
 ```
 
@@ -317,19 +632,31 @@ describe %>%
 
 analyses2 %>% 
   filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
-  print_analysis_kable()
+  print_analysis_kable_del()
 
-# Risks
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "1", "1")
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Non-Initiators", "1", "1")
-create_figure(figure_data2, "Risk Difference", "1", "1")
-create_figure(figure_data2, "Risk Ratio", "1", "1")
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  print_analysis_kable_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  print_analysis_kable_all()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  print_analysis_kable_all_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  print_analysis_kable_trt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  print_analysis_kable_untrt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  print_analysis_kable_no_outc()
 
 ```
 
@@ -344,18 +671,108 @@ describe %>%
 
 analyses2 %>% 
   filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
-  print_analysis_kable()
+  print_analysis_kable_del()
 
-# Risks
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Initiators", "2", "1")
-create_figure(figure_data2 %>% 
-                filter(cohort != "Sens: Trt Pregnancies Outcome" & 
-                         cohort != "Sens: Untrt Pregnancies Outcome"),
-              "Risk, Non-Initiators", "2", "1")
-create_figure(figure_data2, "Risk Difference", "2", "1")
-create_figure(figure_data2, "Risk Ratio", "2", "1")
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
+  print_analysis_kable_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
+  print_analysis_kable_all()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
+  print_analysis_kable_all_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
+  print_analysis_kable_trt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
+  print_analysis_kable_untrt_outc()
+
+analyses2 %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
+  print_analysis_kable_no_outc()
+
 
 ```
+
+
+# Output Figures
+
+## Without Sensitivity Analyses
+
+### Initiation Decreases Risk of Preeclampsia
+
+```{r}
+
+create_figure_nosens(figure_data2 %>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"), 
+              "Risk, Initiators", "0.5")
+create_figure_nosens(figure_data2%>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"),
+                       "Risk, Non-Initiators", "0.5")
+create_figure_nosens(figure_data2, "Risk Difference", "0.5")
+create_figure_nosens(figure_data2, "Risk Ratio", "0.5")
+
+```
+
+### Initiation Does not Affect Risk of Preeclampsia
+
+```{r}
+
+create_figure_nosens(figure_data2 %>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"), 
+              "Risk, Initiators", "1")
+create_figure_nosens(figure_data2%>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"),
+                       "Risk, Non-Initiators", "1")
+create_figure_nosens(figure_data2, "Risk Difference", "0.5", "1")
+create_figure_nosens(figure_data2, "Risk Ratio", "0.5", "1")
+
+```
+
+
+## With Sensitivity Analyses
+
+### Initiation Decreases Risk of Preeclampsia
+
+```{r}
+
+create_figure_sens(figure_data2 %>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"), 
+              "Risk, Initiators", "0.5")
+create_figure_sens(figure_data2%>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"),
+                       "Risk, Non-Initiators", "0.5")
+create_figure_sens(figure_data2, "Risk Difference", "0.5")
+create_figure_sens(figure_data2, "Risk Ratio", "0.5")
+
+```
+
+### Initiation Does not Affect Risk of Preeclampsia
+
+```{r}
+
+create_figure_sens(figure_data2 %>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"), 
+              "Risk, Initiators", "1")
+create_figure_sens(figure_data2%>% 
+                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
+                         Cohort != "Sens: Untrt Pregnancies Outcome"),
+                       "Risk, Non-Initiators", "1")
+create_figure_sens(figure_data2, "Risk Difference", "0.5", "1")
+create_figure_sens(figure_data2, "Risk Ratio", "0.5", "1")
+
+```
+
