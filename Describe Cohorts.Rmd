@@ -37,15 +37,27 @@ Make a function that outputs a table describing a DGM
 
 ```{r}
 
+describe_subset <- subset(describe, rr_abortion == 0.5, rr_preec = 0.5)
+
 describe_cohorts <- function(describe_subset){
   
   hold <- describe_subset %>% 
-    select(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           trt, n_low:missing_mnar_t) %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           missing_mar, missing_mnar, trt,
+           n_low, n_med, n_high, 
+           n_miscarriage_all, n_stillbirth_all, n_livebirth_all) %>% 
     kbl() %>%
     collapse_rows(col_names = c(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage),
                   valign = "top") %>%
     kable_classic()
+  
+  # hold <- describe_subset %>% 
+  #   select(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage,
+  #          trt, n_low:missing_mnar_t) %>% 
+  #   kbl() %>%
+  #   collapse_rows(col_names = c(pnc_wk, marginal_p_miss_severity, marginal_p_miss_miscarriage),
+  #                 valign = "top") %>%
+  #   kable_classic()
   
   return(hold)
   
