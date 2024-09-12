@@ -420,7 +420,7 @@ create_figure_nosens <- function(dataset, parameter, rr_preec, title){
     ggtitle(parameter)
   
   if (parameter == "Risk Ratio") {
-    plot <- plot + scale_y_log10()
+    plot <- plot + scale_y_log10() 
   }
   
   return(plot)
