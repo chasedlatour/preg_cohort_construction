@@ -419,6 +419,10 @@ create_figure_nosens <- function(dataset, parameter, rr_preec, title){
     ylab("Parameter Estimate") +
     ggtitle(parameter)
   
+  if (parameter == "Risk Ratio") {
+    plot <- plot + scale_y_log10()
+  }
+  
   return(plot)
   
 }
@@ -448,6 +452,10 @@ create_figure_sens <- function(dataset, parameter, rr_preec, title){
     xlab("Approximate Percent Missing Due to Severity/Abortion") + 
     ylab("Parameter Estimate") +
     ggtitle(parameter)
+  
+  if (parameter == "Risk Ratio") {
+    plot <- plot + scale_y_log10()
+  }
   
   return(plot)
   
