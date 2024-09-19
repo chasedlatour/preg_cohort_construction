@@ -75,6 +75,20 @@ analyses2 <- analyses %>%
   select(rr_abortion, rr_preec, marginal_p_miss_severity, marginal_p_miss_miscarriage,
          truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc) %>% 
   unnest(c(truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc)) %>% 
+  mutate(
+    obs_del_risk0_bias = obs_del_risk0 - truth_risk0,
+    obs_del_risk1_bias = obs_del_risk1 - truth_risk1,
+    obs_del_rd_bias = obs_del_rd - truth_rd,
+    obs_del_rr_bias = log(obs_del_rr) - log(truth_rr),
+    obs_out_risk0_bias = obs_out_risk0 - truth_risk0,
+    obs_out_risk1_bias = obs_out_risk1 - truth_risk1,
+    obs_out_rd_bias = obs_out_rd - truth_rd,
+    obs_out_rr_bias = log(obs_out_rr) - log(truth_rr),
+    all_preg_risk0_bias = all_preg_risk0 - truth_risk0,
+    all_preg_risk1_bias = all_preg_risk1 - truth_risk1,
+    all_preg_rd_bias = all_preg_rd - truth_rd,
+    all_preg_rr_bias = log(all_preg_rr) - log(truth_rr),
+  ) %>% 
   # select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
   mutate(
     marginal_p_miss_severity = marginal_p_miss_severity, #1.13,
@@ -85,11 +99,12 @@ analyses2 <- analyses %>%
 print_analysis_kable_del <- function(data_subset){
   
   hold <- data_subset %>% 
-    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    mutate(across(truth_risk0:all_preg_rr_bias, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
            truth_risk0, truth_risk1, truth_rd, truth_rr,
-           obs_del_risk0, obs_del_risk1, obs_del_rd, obs_del_rr) %>% 
+           obs_del_risk0, obs_del_risk1, obs_del_rd, obs_del_rr,
+           obs_del_risk0_bias, obs_del_risk1_bias, obs_del_rd_bias, obs_del_rr_bias) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -100,12 +115,13 @@ print_analysis_kable_del <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 2)# 8)
+      "$$RR$$" = 1), 3)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
       "Truth" = 4,
-      "Observed Deliveries" = 4 #,
+      "Observed Deliveries" = 4 ,
+      "Observed Deliveries - Bias" = 4
       # "Observed Outcomes" = 4,
       # "All Pregnancies" = 4,
       # "All Pregnancies, Assuming All Censored had Outcome" = 4,
@@ -122,11 +138,12 @@ print_analysis_kable_del <- function(data_subset){
 print_analysis_kable_outc <- function(data_subset){
   
   hold <- data_subset %>% 
-    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    mutate(across(truth_risk0:all_preg_rr_bias, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
            truth_risk0, truth_risk1, truth_rd, truth_rr,
-           obs_out_risk0, obs_out_risk1, obs_out_rd, obs_out_rr) %>% 
+           obs_out_risk0, obs_out_risk1, obs_out_rd, obs_out_rr,
+           obs_out_risk0_bias, obs_out_risk1_bias, obs_out_rd_bias, obs_out_rr_bias) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -137,13 +154,14 @@ print_analysis_kable_outc <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 2)# 8)
+      "$$RR$$" = 1), 3)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
       "Truth" = 4,
       # "Observed Deliveries" = 4 #,
-      "Observed Outcomes" = 4 #,
+      "Observed Outcomes" = 4,
+      "Observed Outcome - Bias" = 4
       # "All Pregnancies" = 4,
       # "All Pregnancies, Assuming All Censored had Outcome" = 4,
       # "All Pregnancies, Assuming Treated had Outcome" = 4,
@@ -159,11 +177,12 @@ print_analysis_kable_outc <- function(data_subset){
 print_analysis_kable_all <- function(data_subset){
   
   hold <- data_subset %>% 
-    mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
+    mutate(across(truth_risk0:all_preg_rr_bias, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
            truth_risk0, truth_risk1, truth_rd, truth_rr,
-           all_preg_risk0, all_preg_risk1, all_preg_rd, all_preg_rr) %>% 
+           all_preg_risk0, all_preg_risk1, all_preg_rd, all_preg_rr,
+           all_preg_risk0_bias, all_preg_risk1_bias, all_preg_rd_bias, all_preg_rr_bias) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -174,14 +193,15 @@ print_analysis_kable_all <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 2)# 8)
+      "$$RR$$" = 1), 3)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
       "Truth" = 4,
       # "Observed Deliveries" = 4 #,
       # "Observed Outcomes" = 4 #,
-      "All Pregnancies" = 4 #,
+      "All Pregnancies" = 4,
+      "All Preganncies - Bias" = 4
       # "All Pregnancies, Assuming All Censored had Outcome" = 4,
       # "All Pregnancies, Assuming Treated had Outcome" = 4,
       # "All Pregnancies, Assuming Untreated had Outcome" = 4,
@@ -344,10 +364,8 @@ print_analysis_kable_no_outc <- function(data_subset){
 }
 
 
-
-
-
 ```
+
 
 Make a function that outputs figures of the parameters. 
 
