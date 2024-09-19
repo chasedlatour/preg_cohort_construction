@@ -285,7 +285,10 @@ list(
   ),
   
   # Output a RMD file with all of the output.
-  tar_render(report, "Describe Cohorts.Rmd")
+  tar_render(report, "Describe Cohorts.Rmd"),
+  
+  # Output a RMD file with all of the output - figures for manuscript.
+  tar_render(report, "Describe Cohorts Manuscript.Rmd")
   
   
 )
