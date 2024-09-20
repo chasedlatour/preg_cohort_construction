@@ -533,13 +533,67 @@ intermediate %>%
   group_by(trt) %>% 
   summarize(
     min = min(n_total),
-    min_percent = round(100 * min / included, 1),
+    min_percent = round(100 * min / included, 0),
     max = max(n_total),
-    max_percent = round(100 * max / included, 1)
+    max_percent = round(100 * max / included, 0)
   )
   
 
 ```
+Range of initiators and non-initiators with high severity disease in the trial populations.
+
+```{r}
+
+intermediate %>% 
+  mutate(
+    perc_high_severity = round(100 * n_high_num / n_total, 0)
+  ) %>% 
+  group_by(trt) %>% 
+  summarize(
+    min_perc = min(perc_high_severity),
+    max_perc = max(perc_high_severity)
+  )
+
+# intermediate %>% 
+#   group_by(trt) %>% 
+#   summarize(
+#     min_high = min(n_high_num),
+#     min_high_perc = round(100 * min_high / n_total[n_high_num == min_high], 0),
+#     # total_min = n_total[n_high_num == min_high],
+#     max_high = max(n_high_num),
+#     max_high_perc = round(100 * max_high / n_total[n_high_num == max_high], 0),
+#   )
+
+
+```
+
+Distribution of pregnancy outcomes among untreated individuals.
+
+```{r}
+
+intermediate %>% 
+  filter(trt == 0) %>% 
+  mutate(
+    miscarriage_perc = round(100 * n_miscarriage_num / n_total, 0),
+    stillbirth_perc = round(100 * n_stillbirth_num / n_total, 0),
+    livebirth_perc = round(100 * n_livebirth_num / n_total, 0)
+  ) %>% 
+  summarize(
+    miscarriage_min = min(miscarriage_perc),
+    miscarriage_avg = mean(miscarriage_perc),
+    miscarriage_max = max(miscarriage_perc),
+    stillbirth_min = min(stillbirth_perc),
+    stillbirth_avg = mean(stillbirth_perc),
+    stillbirth_max = max(stillbirth_perc),
+    livebirth_min = min(livebirth_perc),
+    livebirth_avg = mean(livebirth_perc),
+    livebirth_max = max(livebirth_perc)
+  )
+
+```
+
+
+
 
 ## $RR_{Abortion} = 0.5, RR_{Preeclampsia} = 0.5$
 
