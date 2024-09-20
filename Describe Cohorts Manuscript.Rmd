@@ -1,11 +1,12 @@
 ---
-title: "Describe Cohorts"
+title: "Describe Cohorts Manuscript"
 author: "Chase Latour"
 date: "`r Sys.Date()`"
 output: 
   html_document:
     code_folding: hide
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -364,8 +365,10 @@ print_analysis_kable_no_outc <- function(data_subset){
 }
 
 
-```
 
+
+
+```
 
 Make a function that outputs figures of the parameters. 
 
@@ -396,7 +399,8 @@ figure_data <- analyses2 %>%
     missing = factor(missing,
                      levels = c("0/0.05", "0.025/0.025", "0.05/0",
                                 "0/0.2",  "0.1/0.1",     "0.2/0"))
-  )
+  ) %>% 
+  filter(!grepl("_bias", estimate))
 
 truths <- figure_data %>% 
   filter(Cohort == "Truth") %>% 
@@ -410,10 +414,14 @@ figure_data2 <- left_join(estimates, truths, by = c("rr_abortion", "rr_preec",
                                                     "missing", "parameter")) %>% 
   mutate(
     scenario = case_when(
-      rr_abortion == 0.5 ~ "Initiation decreases risk of miscarriage",
-      rr_abortion == 1.0 ~ "Initiation does not affect risk of miscarriage",
-      rr_abortion == 2.0 ~ "Initiation increases risk of miscarriage"
-    )
+      rr_abortion == 0.5 ~ "Decrease risk of miscarriage",
+      rr_abortion == 1.0 ~ "No direct effect on risk of miscarriage",
+      rr_abortion == 2.0 ~ "Increase risk of miscarriage"
+    ),
+    scenario = factor(scenario, 
+                      levels = c("Decrease risk of miscarriage",
+                                 "No direct effect on risk of miscarriage",
+                                 "Increase risk of miscarriage"))
   )
 
 
@@ -428,14 +436,18 @@ create_figure_nosens <- function(dataset, parameter, rr_preec, title){
     filter(rr_preec == rr_preeclampsia) %>%
     filter(parameter == param) %>% 
     ggplot(aes(x = missing, y = value, color = Cohort, shape = Cohort)) + # , shape = cohort
-    geom_point(size = 3, position = position_dodge(0.5)) +
+    geom_point(size = 2, position = position_dodge(0.5)) +
     facet_wrap(scenario ~., nrow = 1) +
     geom_hline(aes(yintercept = truth), col = "red", linetype = "dashed") + 
     # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
     #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
     xlab("Approximate Percent Missing Due to Severity/Abortion") + 
     ylab("Parameter Estimate") +
-    ggtitle(parameter)
+    ggtitle(title) +
+    scale_x_discrete(labels = c("0/0.05" = "0/5", "0.025/0.025" = "2.5/2.5", "0.05/0" = "5/0",
+                                "0/0.2" = "0/20", "0.1/0.1" = "10/10", "0.2/0" = "20/0")) +
+    theme(legend.title = element_text(size = 8), 
+          legend.text = element_text(size = 8))
   
   if (parameter == "Risk Ratio") {
     plot <- plot + scale_y_log10() 
@@ -462,14 +474,16 @@ create_figure_sens <- function(dataset, parameter, rr_preec, title){
     filter(rr_preec == rr_preeclampsia) %>%
     filter(parameter == param) %>% 
     ggplot(aes(x = missing, y = value, color = Cohort, shape = Analysis)) + # , shape = cohort
-    geom_point(size = 3, position = position_dodge(0.5)) +
+    geom_point(size = 2, position = position_dodge(0.5)) +
     facet_wrap(scenario ~., nrow = 1) +
     geom_hline(aes(yintercept = truth), col = "red", linetype = "dashed") + 
     # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
     #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
     xlab("Approximate Percent Missing Due to Severity/Abortion") + 
     ylab("Parameter Estimate") +
-    ggtitle(parameter)
+    ggtitle(title) +
+    scale_x_discrete(labels = c("0/0.05" = "0/5", "0.025/0.025" = "2.5/2.5", "0.05/0" = "5/0",
+                                "0/0.2" = "0/20", "0.1/0.1" = "10/10", "0.2/0" = "20/0"))
   
   if (parameter == "Risk Ratio") {
     plot <- plot + scale_y_log10()
@@ -487,6 +501,45 @@ create_figure_sens <- function(dataset, parameter, rr_preec, title){
 
 # Output Tabular Results
 Create kable with description of a specified dataset. Do this for each RR combination.
+
+## First, output descriptives of whole population
+
+Range of initiators versus non-initiators in the trial population
+
+```{r}
+
+# Extract numeric values from the character columns
+intermediate <- describe %>% 
+  mutate(
+    n_low_num = as.double(str_extract(n_low, "^\\d+")),
+    n_med_num = as.double(str_extract(n_med, "^\\d+")),
+    n_high_num = as.double(str_extract(n_high, "^\\d+")),
+    n_total = n_low_num + n_med_num + n_high_num,
+    n_miscarriage_num = as.double(str_extract(n_miscarriage_all, "^\\d+")),
+    n_stillbirth_num = as.double(str_extract(n_stillbirth_all, "^\\d+")),
+    n_livebirth_num = as.double(str_extract(n_livebirth_all, "^\\d+"))
+  )
+
+included <- as.double(intermediate %>% 
+  group_by(rr_abortion, rr_preec, marginal_p_miss_miscarriage, marginal_p_miss_severity) %>% 
+  summarize(
+    n_incl = sum(n_total),
+    .groups = 'drop'
+  ) %>% 
+  # They all should have the same number included
+  summarize(min(n_incl)))
+
+intermediate %>% 
+  group_by(trt) %>% 
+  summarize(
+    min = min(n_total),
+    min_percent = round(100 * min / included, 1),
+    max = max(n_total),
+    max_percent = round(100 * max / included, 1)
+  )
+  
+
+```
 
 ## $RR_{Abortion} = 0.5, RR_{Preeclampsia} = 0.5$
 
@@ -735,16 +788,37 @@ analyses2 %>%
 
 ```{r}
 
+pdf("Risk - Initiators - Decrease risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
 create_figure_nosens(figure_data2 %>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Initiators", "0.5")
+              "Risk, Initiators", 
+              "0.5",
+              "(A) Risk, Initiators")
+dev.off()
+
+pdf("Risk - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
 create_figure_nosens(figure_data2%>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"),
-                       "Risk, Non-Initiators", "0.5")
-create_figure_nosens(figure_data2, "Risk Difference", "0.5")
-create_figure_nosens(figure_data2, "Risk Ratio", "0.5")
+                "Risk, Non-Initiators", 
+                "0.5",
+                "(B) Risk, Non-Initiators")
+dev.off()
+
+pdf("Risk difference - Decrease risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
+create_figure_nosens(figure_data2, "Risk Difference", "0.5",
+                     "(C) Risk Difference")
+dev.off()
+
+pdf("Risk ratio - Decrease risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
+create_figure_nosens(figure_data2, "Risk Ratio", "0.5",
+                     "(D) Risk Ratio")
+dev.off()
 
 ```
 
@@ -752,16 +826,38 @@ create_figure_nosens(figure_data2, "Risk Ratio", "0.5")
 
 ```{r}
 
+pdf("Risk - Initiators - No effect risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
 create_figure_nosens(figure_data2 %>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Initiators", "1")
+              "Risk, Initiators", 
+              "1",
+              "(A) Risk, Initiators")
+dev.off()
+
+pdf("Risk - Non-Initiators - No effect risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
 create_figure_nosens(figure_data2%>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"),
-                       "Risk, Non-Initiators", "1")
-create_figure_nosens(figure_data2, "Risk Difference", "0.5", "1")
-create_figure_nosens(figure_data2, "Risk Ratio", "0.5", "1")
+                       "Risk, Non-Initiators", 
+                "1",
+                "(B) Risk, Non-Initiators")
+dev.off()
+
+pdf("Risk difference - No effect risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
+create_figure_nosens(figure_data2, "Risk Difference", 
+                     "1", 
+                     "(C) Risk Difference")
+dev.off()
+
+pdf("Risk ratio - No effect risk of Preeclampsia - No sensitivity analyses.pdf", 
+    height = 2, width = 10)
+create_figure_nosens(figure_data2, "Risk Ratio", "1", 
+                     "(D) Risk Ratio")
+dev.off()
 
 ```
 
