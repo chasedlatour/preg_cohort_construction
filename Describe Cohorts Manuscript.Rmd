@@ -517,7 +517,11 @@ intermediate <- describe %>%
     n_total = n_low_num + n_med_num + n_high_num,
     n_miscarriage_num = as.double(str_extract(n_miscarriage_all, "^\\d+")),
     n_stillbirth_num = as.double(str_extract(n_stillbirth_all, "^\\d+")),
-    n_livebirth_num = as.double(str_extract(n_livebirth_all, "^\\d+"))
+    n_livebirth_num = as.double(str_extract(n_livebirth_all, "^\\d+")),
+    n_missing_severity = as.double(str_extract(missing_mar, "^\\d+")),
+    n_missing_mnar = as.double(str_extract(missing_mnar, "^\\d+")),
+    n_missing_miscarriage = n_missing_mnar - n_missing_severity,
+    marginal_p_miss_miscarriage = marginal_p_miss_miscarriage / 4.9
   )
 
 included <- as.double(intermediate %>% 
@@ -566,6 +570,34 @@ intermediate %>%
 
 
 ```
+
+
+Range of Missingness by Scenarios
+
+```{r}
+
+intermediate %>% 
+  filter(trt == 0) %>% 
+  mutate(
+    perc_missing_miscarriage = round(100 * n_missing_miscarriage / n_total, 0),
+    perc_missing_severity = round(100 * n_missing_severity / n_total, 0)
+  ) %>% 
+  group_by(marginal_p_miss_miscarriage, marginal_p_miss_severity) %>% 
+  summarize(
+    min_perc_miscarriage = min(perc_missing_miscarriage),
+    max_perc_miscarriage = max(perc_missing_miscarriage),
+    min_perc_severity = min(perc_missing_severity),
+    max_perc_severity = max(perc_missing_severity),
+    .groups = "drop"
+  ) %>% 
+  kbl() %>% 
+  kable_classic()
+
+
+```
+
+
+
 
 Distribution of pregnancy outcomes among untreated individuals.
 
