@@ -925,13 +925,17 @@ dev.off()
 create_figure_sens(figure_data2 %>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Initiators", "0.5")
+              "Risk, Initiators", "0.5",
+              "(A) Risk, Initiators")
 create_figure_sens(figure_data2%>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"),
-                       "Risk, Non-Initiators", "0.5")
-create_figure_sens(figure_data2, "Risk Difference", "0.5")
-create_figure_sens(figure_data2, "Risk Ratio", "0.5")
+                       "Risk, Non-Initiators", "0.5",
+                "(B) Risk, Non-Initiators")
+create_figure_sens(figure_data2, "Risk Difference", "0.5",
+                   "(C) Risk Difference")
+create_figure_sens(figure_data2, "Risk Ratio", "0.5",
+                   "(D) Risk Ratio")
 
 ```
 
@@ -942,13 +946,17 @@ create_figure_sens(figure_data2, "Risk Ratio", "0.5")
 create_figure_sens(figure_data2 %>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Initiators", "1")
+              "Risk, Initiators", "1",
+              "(A) Risk, Initiators")
 create_figure_sens(figure_data2%>% 
                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
                          Cohort != "Sens: Untrt Pregnancies Outcome"),
-                       "Risk, Non-Initiators", "1")
-create_figure_sens(figure_data2, "Risk Difference", "0.5", "1")
-create_figure_sens(figure_data2, "Risk Ratio", "0.5", "1")
+                       "Risk, Non-Initiators", "1",
+                "(B) Risk, Non-Initiators")
+create_figure_sens(figure_data2, "Risk Difference", "1",
+                   "(C) Risk Difference")
+create_figure_sens(figure_data2, "Risk Ratio", "1",
+                   "(D) Risk Ratio")
 
 ```
 
