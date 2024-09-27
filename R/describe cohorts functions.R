@@ -78,11 +78,11 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       missing_mar_p75 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.75)+2,
       missing_mar_med = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.5)+2,
       
-      missing_mnar = sum(ltfu_mar_mnar != "not"),
+      missing_mnar = sum(ltfu_mar_mnar != "not") - sum(ltfu_mar != "not"),
       missing_mnar_perc = round(100*missing_mnar/n(), 2),
-      missing_mnar_p25 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs=0.25)+2,
-      missing_mnar_p75 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.75)+2,
-      missing_mnar_med = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not"], probs = 0.5)+2,
+      missing_mnar_p25 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not" & ltfu_mar == "not"], probs=0.25)+2,
+      missing_mnar_p75 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not" & ltfu_mar == "not"], probs = 0.75)+2,
+      missing_mnar_med = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not" & ltfu_mar == "not"], probs = 0.5)+2,
       
       .groups = 'keep'
     ) %>% 
