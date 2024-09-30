@@ -136,7 +136,10 @@ potential_risks <- function(data){
     risk0 = sum(preeclampsia0) / .N,
     risk1 = sum(preeclampsia1) / .N,
     rd = (sum(preeclampsia1) / .N) - (sum(preeclampsia0) / .N),
-    rr = (sum(preeclampsia1) / .N) / (sum(preeclampsia0) / .N)
+    rr = (sum(preeclampsia1) / .N) / (sum(preeclampsia0) / .N),
+    # Added OR -- Think that they should converge in these cases
+    or = ((sum(preeclampsia1) / .N) / (1 - (sum(preeclampsia1) / .N))) / 
+      (((sum(preeclampsia0) / .N) / (1 - (sum(preeclampsia0) / .N))))
   )] %>% 
     as_tibble()
   
@@ -192,7 +195,9 @@ calculate_risks <- function(dataset, severity_dist){
   # Calculate risk difference and risk ratio
   final_risks_wide[, `:=`(
     rd = risk1 - risk0,
-    rr = risk1 / risk0
+    rr = risk1 / risk0,
+    # Added OR to see if they converge as expected.
+    or = (risk1 / (1-risk1)) / (risk0 / (1-risk0))
   )]
   
   # Return the final results
@@ -226,8 +231,8 @@ aj_estimator <- function(data_subset) {
   # Run the AJ model
   # aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
   aj <- cuminc(ftime = data_subset$time, fstatus = data_subset$outcome, group = data_subset$trt)
-
-  # Extract hte summary of the survival fit
+  
+  # Extract the summary of the survival fit
   trt0_risk <- last(aj$`0 1`$est)
   trt1_risk <- last(aj$`1 1`$est)
   
@@ -270,29 +275,29 @@ aj_estimator <- function(data_subset) {
 calculate_aj_risks_sev <- function(dataset, severity_dist) { 
   
   # dataset is a subset of the original dataset, subset by severity value
-
+  
   # Calculate the count for each group
   dataset[, count := .N, by = .(trt, final_pregout_marmnar_tte)]
-
+  
   # Jitter event times and calculate the adjusted time and outcome
   dataset[, jitter := runif(.N, min = -.01, max = .01)]
   dataset[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
   dataset[, outcome := as.factor(final_pregout_mar_mnar)]
-
+  
   results <- dataset[, aj_estimator(.SD), by = severity]
-
+  
   results[, severity := as.numeric(severity)]
-
+  
   # Left merge the severity distribution onto the risks
   merge_sev <- merge(results, severity_dist, by = "severity", all.x = TRUE)
-
+  
   merge_sev[, `:=`(
     risk0_std = risk0 * prop,
     risk1_std = risk1 * prop
   )]
-
+  
   return(merge_sev)
-
+  
 }
 
 
@@ -301,18 +306,18 @@ calculate_aj_risks_sev <- function(dataset, severity_dist) {
 ## could take place within one server session.
 
 calculate_aj_risks <- function(high_sev, middle_sev, low_sev){
-
+  
   hold <- rbind(high_sev, middle_sev, low_sev)
-
+  
   combined <- hold[, .(
     risk0 = sum(risk0_std),
     risk1 = sum(risk1_std),
     rd = sum(risk1_std) - sum(risk0_std),
     rr = sum(risk1_std) / sum(risk0_std)
   )]
-
+  
   return(combined)
-
+  
 }
 
 
@@ -367,7 +372,7 @@ sensitivity_analysis_risks <- function(data, sev_dist){
     )
   
   return(sens_analyses)
-
+  
 }
 
 

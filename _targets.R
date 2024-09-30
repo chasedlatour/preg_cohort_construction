@@ -19,7 +19,7 @@ tar_option_set(
   # Packages that your targets need for their tasks.
   packages = c("tibble", "tidyverse", "readxl", "survival", "rlang", "data.table",
                "cmprsk"),
-  seed = 13049857 #,
+  seed = 13049847 #,
   # format = "qs", # Optionally set the default storage format. qs is fast.
   # controller = crew::crew_controller_local(workers = 2, seconds_idle = 3),
   # memory = "transient",
@@ -44,13 +44,13 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       "_EMM.xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 15000
+treatment_effects$n = 5000000 #10000
 
 
 # Create a dataset with the missing data parameters
 missing_params <- data.frame(
   marginal_p_miss_severity = c(0, 0.025, 0.05,
-                                      0, 0.100, 0.20),
+                               0, 0.100, 0.20),
   # marginal_p_miss_severity = c(0, 0.025, 0.05,
   #                              0, 0.100, 0.20) * 0.3,
   beta12 = 1.3, #2.55, 
@@ -97,7 +97,7 @@ list(
             gamma1 = gamma1,
             pnc_wk = pnc_wk
           )
-          ),
+        ),
         # Describe the data
         targets::tar_target(
           described_data,
@@ -147,7 +147,15 @@ list(
         # Get the risks among the pregnancies with observed outcomes
         targets::tar_target(
           observed_outcomes,
-           calculate_risks(data_prep[obs_outcome_mar_mnar == 1], severity_dist_outcomes) %>% 
+          calculate_risks(data_prep[obs_outcome_mar_mnar == 1], severity_dist_outcomes) %>% 
+            as_tibble()
+        ),
+        # ADDED
+        # Get the risks among all pregnancies, CCA among those with observed outcome
+        # but standardized to the EMM distribution at baseline
+        targets::tar_target(
+          all_preg_or,
+          calculate_risks(data_prep[obs_outcome_mar_mnar == 1], severity_dist_total) %>% 
             as_tibble()
         ),
         # Get the risks among high-severity pregnancies using Aalen-Johansen estimator
@@ -186,7 +194,8 @@ list(
                         names_prefix = "risk") %>% 
             mutate(
               rd = risk1 - risk0,
-              rr = risk1 / risk0
+              rr = risk1 / risk0,
+              or = (risk1 / (1-risk1)) / (risk0 / (1-risk0))
             )
         ),
         # Get the tibble for all trt outcomes - Assume that treated missing have an outcome
@@ -199,7 +208,8 @@ list(
                         names_prefix = "risk") %>% 
             mutate(
               rd = risk1 - risk0,
-              rr = risk1 / risk0
+              rr = risk1 / risk0,
+              or = (risk1 / (1-risk1)) / (risk0 / (1-risk0))
             )
         ),
         # Get the tibble for all untrt outcomes - Assume that untreated missing have an outcome
@@ -212,7 +222,8 @@ list(
                         names_prefix = "risk") %>% 
             mutate(
               rd = risk1 - risk0,
-              rr = risk1 / risk0
+              rr = risk1 / risk0,
+              or = (risk1 / (1-risk1)) / (risk0 / (1-risk0))
             )
         ),
         # Get the tibble for all no outcomes - Assume that all missing outcomes do not have an outcome
@@ -225,7 +236,8 @@ list(
                         names_prefix = "risk") %>% 
             mutate(
               rd = risk1 - risk0,
-              rr = risk1 / risk0
+              rr = risk1 / risk0,
+              or = (risk1 / (1-risk1)) / (risk0 / (1-risk0))
             )
         ),
         # Combine the analyzed data
@@ -239,6 +251,7 @@ list(
             observed_deliveries = list(observed_deliveries),
             observed_outcomes = list(observed_outcomes),
             tte = list(tte_mar_mnar),
+            all_preg_or = list(all_preg_or), #ADDED
             sens_anal_all_outc = list(sens_anal_mar_mnar_all_outc),
             sens_anal_trt_outc = list(sens_anal_mar_mnar_trt_outc),
             sens_anal_untrt_out = list(sens_anal_mar_mnar_untrt_outc),
@@ -284,8 +297,8 @@ list(
     command = dplyr::bind_rows(!!!.x)
   ),
   
-  # Output a RMD file with all of the output.
-  tar_render(report, "Describe Cohorts.Rmd"),
+  # # Output a RMD file with all of the output.
+  # tar_render(report, "Describe Cohorts.Rmd"),
   
   # Output a RMD file with all of the output - figures for manuscript.
   tar_render(manuscript_report, "Describe Cohorts Manuscript.Rmd")

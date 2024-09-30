@@ -68,33 +68,40 @@ analyses2 <- analyses %>%
     observed_del = map(observed_deliveries, ~.x %>%  rename_with(~paste0("obs_del_", .))),
     observed_out = map(observed_outcomes, ~.x %>% rename_with(~paste0("obs_out_", .))),
     tte = map(tte, ~.x %>% rename_with(~paste0("all_preg_", .))),
+    all_preg_or = map(all_preg_or, ~.x %>% rename_with(~paste0("all_preg_or_", .))), # ADDED
     all_outc = map(sens_anal_all_outc, ~.x %>% rename_with(~paste0("all_preg_all_outc_", .))),
     trt_outc = map(sens_anal_trt_outc, ~.x %>% rename_with(~paste0("trt_preg_outc_", .))),
     untrt_outc = map(sens_anal_untrt_out, ~.x %>% rename_with(~paste0("untrt_preg_outc_", .))),
     no_outc = map(sens_anal_no_outc, ~.x %>% rename_with(~paste0("all_preg_no_outc_", .)))
   ) %>% 
   select(rr_abortion, rr_preec, marginal_p_miss_severity, marginal_p_miss_miscarriage,
-         truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc) %>% 
-  unnest(c(truth, observed_del, observed_out, tte, all_outc, trt_outc, untrt_outc, no_outc)) %>% 
+         truth, observed_del, observed_out, tte, all_preg_or, all_outc, # ADDED
+         trt_outc, untrt_outc, no_outc) %>% 
+  unnest(c(truth, observed_del, observed_out, tte, all_preg_or, # ADDED
+           all_outc, trt_outc, untrt_outc, no_outc)) %>% 
   mutate(
     obs_del_risk0_bias = obs_del_risk0 - truth_risk0,
     obs_del_risk1_bias = obs_del_risk1 - truth_risk1,
     obs_del_rd_bias = obs_del_rd - truth_rd,
     obs_del_rr_bias = log(obs_del_rr) - log(truth_rr),
+    obs_del_or_bias = log(obs_del_or) - log(truth_or),
     obs_out_risk0_bias = obs_out_risk0 - truth_risk0,
     obs_out_risk1_bias = obs_out_risk1 - truth_risk1,
     obs_out_rd_bias = obs_out_rd - truth_rd,
     obs_out_rr_bias = log(obs_out_rr) - log(truth_rr),
+    obs_out_or_bias = log(obs_out_or) - log(truth_or),
     all_preg_risk0_bias = all_preg_risk0 - truth_risk0,
     all_preg_risk1_bias = all_preg_risk1 - truth_risk1,
     all_preg_rd_bias = all_preg_rd - truth_rd,
     all_preg_rr_bias = log(all_preg_rr) - log(truth_rr),
+    all_preg_or_bias = log(all_preg_or_or) - log(truth_or)
   ) %>% 
   # select(-c(ends_with("pnc_wk"), ends_with("risk0"), ends_with("risk1")))
   mutate(
     marginal_p_miss_severity = marginal_p_miss_severity, #1.13,
     marginal_p_miss_miscarriage = marginal_p_miss_miscarriage / 4.9
-  ) 
+  ) %>% 
+  select(-c(all_preg_or_risk0, all_preg_or_risk1, all_preg_or_rd, all_preg_or_rr))
 
 
 print_analysis_kable_del <- function(data_subset){
@@ -103,9 +110,10 @@ print_analysis_kable_del <- function(data_subset){
     mutate(across(truth_risk0:all_preg_rr_bias, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           truth_risk0, truth_risk1, truth_rd, truth_rr,
-           obs_del_risk0, obs_del_risk1, obs_del_rd, obs_del_rr,
-           obs_del_risk0_bias, obs_del_risk1_bias, obs_del_rd_bias, obs_del_rr_bias) %>% 
+           truth_risk0, truth_risk1, truth_rd, truth_rr, truth_or,
+           obs_del_risk0, obs_del_risk1, obs_del_rd, obs_del_rr, obs_del_or, 
+           obs_del_risk0_bias, obs_del_risk1_bias, obs_del_rd_bias, obs_del_rr_bias,
+           obs_del_or_bias) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -116,13 +124,14 @@ print_analysis_kable_del <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 3)# 8)
+      "$$RR$$" = 1,
+      "$$OR$$" = 1), 3)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
-      "Truth" = 4,
-      "Observed Deliveries" = 4 ,
-      "Observed Deliveries - Bias" = 4
+      "Truth" = 5,
+      "Observed Deliveries" = 5,
+      "Observed Deliveries - Bias" = 5
     ))
   
   return(hold)
@@ -136,9 +145,10 @@ print_analysis_kable_outc <- function(data_subset){
     mutate(across(truth_risk0:all_preg_rr_bias, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           truth_risk0, truth_risk1, truth_rd, truth_rr,
-           obs_out_risk0, obs_out_risk1, obs_out_rd, obs_out_rr,
-           obs_out_risk0_bias, obs_out_risk1_bias, obs_out_rd_bias, obs_out_rr_bias) %>% 
+           truth_risk0, truth_risk1, truth_rd, truth_rr, truth_or, 
+           obs_out_risk0, obs_out_risk1, obs_out_rd, obs_out_rr, obs_out_or,
+           obs_out_risk0_bias, obs_out_risk1_bias, obs_out_rd_bias, obs_out_rr_bias,
+           obs_out_or_bias) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -149,13 +159,14 @@ print_analysis_kable_outc <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 3)# 8)
+      "$$RR$$" = 1,
+      "$$OR$$" = 1), 3)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
-      "Truth" = 4,
-      "Observed Outcomes" = 4,
-      "Observed Outcome - Bias" = 4
+      "Truth" = 5,
+      "Observed Deliveries" = 5,
+      "Observed Deliveries - Bias" = 5
     ))
   
   return(hold)
@@ -202,8 +213,9 @@ print_analysis_kable_all_outc <- function(data_subset){
     mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           truth_risk0, truth_risk1, truth_rd, truth_rr,
-           all_preg_all_outc_risk0, all_preg_all_outc_risk1, all_preg_all_outc_rd, all_preg_all_outc_rr) %>% 
+           truth_risk0, truth_risk1, truth_rd, truth_rr, truth_or,
+           all_preg_all_outc_risk0, all_preg_all_outc_risk1, all_preg_all_outc_rd,
+           all_preg_all_outc_rr, all_preg_all_outc_or) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -214,12 +226,13 @@ print_analysis_kable_all_outc <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 2)# 8)
+      "$$RR$$" = 1,
+      "$$OR$$" = 1), 2)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
-      "Truth" = 4,
-      "All Pregnancies, Assuming All Censored had Outcome" = 4 
+      "Truth" = 5,
+      "Observed Deliveries" = 5
     ))
   
   return(hold)
@@ -233,8 +246,9 @@ print_analysis_kable_trt_outc <- function(data_subset){
     mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           truth_risk0, truth_risk1, truth_rd, truth_rr,
-           trt_preg_outc_risk0, trt_preg_outc_risk1, trt_preg_outc_rd, trt_preg_outc_rr) %>% 
+           truth_risk0, truth_risk1, truth_rd, truth_rr, truth_or,
+           trt_preg_outc_risk0, trt_preg_outc_risk1, trt_preg_outc_rd, trt_preg_outc_rr,
+           trt_preg_outc_or) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -245,12 +259,13 @@ print_analysis_kable_trt_outc <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 2)# 8)
+      "$$RR$$" = 1,
+      "$$OR$$" = 1), 2)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
-      "Truth" = 4,
-      "All Pregnancies, Assuming Treated had Outcome" = 4
+      "Truth" = 5,
+      "Observed Deliveries" = 5
     ))
   
   return(hold)
@@ -265,8 +280,9 @@ print_analysis_kable_untrt_outc <- function(data_subset){
     mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           truth_risk0, truth_risk1, truth_rd, truth_rr,
-           untrt_preg_outc_risk0, untrt_preg_outc_risk1, untrt_preg_outc_rd, untrt_preg_outc_rr) %>% 
+           truth_risk0, truth_risk1, truth_rd, truth_rr, truth_or,
+           untrt_preg_outc_risk0, untrt_preg_outc_risk1, untrt_preg_outc_rd, 
+           untrt_preg_outc_rr, untrt_preg_outc_or) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -277,12 +293,13 @@ print_analysis_kable_untrt_outc <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 2)# 8)
+      "$$RR$$" = 1,
+      "$$OR$$" = 1), 2)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
-      "Truth" = 4,
-      "All Pregnancies, Assuming Untreated had Outcome" = 4 #,
+      "Truth" = 5,
+      "Observed Deliveries" = 5
     ))
   
   return(hold)
@@ -298,8 +315,9 @@ print_analysis_kable_no_outc <- function(data_subset){
     mutate(across(truth_risk0:all_preg_no_outc_rr, ~round(.x, 3))) %>% 
     select(!c(rr_abortion, rr_preec)) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           truth_risk0, truth_risk1, truth_rd, truth_rr,
-           all_preg_no_outc_risk0, all_preg_no_outc_risk1, all_preg_no_outc_rd, all_preg_no_outc_rr) %>% 
+           truth_risk0, truth_risk1, truth_rd, truth_rr, truth_or,
+           all_preg_no_outc_risk0, all_preg_no_outc_risk1, all_preg_no_outc_rd,
+           all_preg_no_outc_rr, all_preg_no_outc_or) %>% 
     kbl(col.names = NA) %>% # 
     collapse_rows(columns = 1:2,
                   valign = "top") %>%
@@ -310,12 +328,13 @@ print_analysis_kable_no_outc <- function(data_subset){
       rep(c("$$Risk_0$$" = 1,
       "$$Risk_1$$" = 1,
       "$$RD$$" = 1,
-      "$$RR$$" = 1), 2)# 8)
+      "$$RR$$" = 1,
+      "$$OR$$" = 1), 2)# 8)
     )) %>% 
     add_header_above(c(
       " " = 2,
-      "Truth" = 4,
-      "All Pregnancies, Assuming All Censored did not have Outcome" = 4
+      "Truth" = 5,
+      "Observed Deliveries" = 5
     ))
   
   return(hold)
@@ -356,7 +375,8 @@ figure_data <- analyses2 %>%
     parameter = case_when(grepl("_risk0", estimate) ~ "Risk, Non-Initiators",
                           grepl("_risk1", estimate) ~ "Risk, Initiators",
                           grepl("_rd", estimate) ~ "Risk Difference",
-                          grepl("_rr", estimate) ~ "Risk Ratio"),
+                          grepl("_rr", estimate) ~ "Risk Ratio",
+                          grepl("_or", estimate) ~ "Odds Ratio"),
     missing = paste0(marginal_p_miss_severity,"/", marginal_p_miss_miscarriage) ,
     missing = factor(missing,
                      levels = c("0/0.05", "0.025/0.025", "0.05/0",
@@ -426,7 +446,8 @@ bias_figure_data <- analyses2 %>%
     parameter = case_when(grepl("_risk0", estimate) ~ "Risk, Non-Initiators",
                           grepl("_risk1", estimate) ~ "Risk, Initiators",
                           grepl("_rd", estimate) ~ "Risk Difference",
-                          grepl("_rr", estimate) ~ "Risk Ratio"),
+                          grepl("_rr", estimate) ~ "Risk Ratio",
+                          grepl("_or", estimate) ~ "Odds Ratio"),
     missing = paste0(marginal_p_miss_severity,"/", marginal_p_miss_miscarriage) ,
     missing = factor(missing,
                      levels = c("0/0.05", "0.025/0.025", "0.05/0",
@@ -856,7 +877,7 @@ create_figure_nosens <- function(dataset, parameter, rr_preec, title){
     scale_colour_grey() +
     theme_bw()
   
-  if (parameter == "Risk Ratio") {
+  if (parameter == "Risk Ratio" | parameter == "Odds Ratio") {
     plot <- plot + scale_y_log10() 
   }
   
@@ -895,8 +916,8 @@ create_figure_sens <- function(dataset, parameter, rr_preec, title){
     scale_colour_grey() +
     theme_bw()
   
-  if (parameter == "Risk Ratio") {
-    plot <- plot + scale_y_log10()
+  if (parameter == "Risk Ratio" | parameter == "Odds Ratio") {
+    plot <- plot + scale_y_log10() 
   }
   
   return(plot)
@@ -946,6 +967,12 @@ create_figure_nosens(figure_data2_5pct, "Risk Ratio", "0.5",
                      "(D) Risk Ratio")
 dev.off()
 
+pdf("Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
+    height = 2, width = 10)
+create_figure_nosens(figure_data2_5pct, "Odds Ratio", "0.5",
+                     "(E) Odds Ratio")
+dev.off()
+
 ```
 
 ~20% of study participants are LTFU
@@ -986,6 +1013,12 @@ create_figure_nosens(figure_data2_20pct, "Risk Ratio", "0.5",
                      "(D) Risk Ratio")
 dev.off()
 
+pdf("Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
+    height = 2, width = 10)
+create_figure_nosens(figure_data2_20pct, "Odds Ratio", "0.5",
+                     "(E) Odds Ratio")
+dev.off()
+
 ```
 
 
@@ -1024,6 +1057,13 @@ create_figure_nosens(figure_data2_5pct, "Risk Ratio", "1",
                      "(D) Risk Ratio")
 dev.off()
 
+
+pdf("Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
+    height = 2, width = 10)
+create_figure_nosens(figure_data2_5pct, "Odds Ratio", "1", 
+                     "(E) Odds Ratio")
+dev.off()
+
 ```
 
 
@@ -1058,6 +1098,12 @@ pdf("Risk ratio - No effect risk of Preeclampsia - No sensitivity analyses - 20p
     height = 2, width = 10)
 create_figure_nosens(figure_data2_20pct, "Risk Ratio", "1", 
                      "(D) Risk Ratio")
+dev.off()
+
+pdf("Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
+    height = 2, width = 10)
+create_figure_nosens(figure_data2_20pct, "Odds Ratio", "1", 
+                     "(E) Odds Ratio")
 dev.off()
 
 ```
@@ -1097,6 +1143,12 @@ create_figure_sens(figure_data2_5pct, "Risk Difference", "0.5",
 create_figure_sens(figure_data2_5pct, "Risk Ratio", "0.5",
                    "(D) Risk Ratio")
 # dev.off()
+# 
+# pdf("Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
+#     height = 2, width = 10)
+create_figure_sens(figure_data2_5pct, "Odds Ratio", "0.5",
+                   "(E) Odds Ratio")
+# dev.off()
 
 ```
 
@@ -1128,6 +1180,12 @@ create_figure_sens(figure_data2_20pct, "Risk Difference", "0.5",
 #     height = 2, width = 10)
 create_figure_sens(figure_data2_20pct, "Risk Ratio", "0.5",
                    "(D) Risk Ratio")
+# dev.off()
+# 
+# pdf("Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
+#     height = 2, width = 10)
+create_figure_sens(figure_data2_20pct, "Odds Ratio", "0.5",
+                   "(E) Odds Ratio")
 # dev.off()
 
 ```
@@ -1164,6 +1222,12 @@ create_figure_sens(figure_data2_5pct, "Risk Difference", "1",
 create_figure_sens(figure_data2_5pct, "Risk Ratio", "1",
                    "(D) Risk Ratio")
 # dev.off()
+# 
+# pdf("Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
+#     height = 2, width = 10)
+create_figure_sens(figure_data2_5pct, "Odds Ratio", "1",
+                   "(E) Odds Ratio")
+# dev.off()
 
 ```
 
@@ -1195,6 +1259,12 @@ create_figure_sens(figure_data2_20pct, "Risk Difference", "1",
 #     height = 2, width = 10)
 create_figure_sens(figure_data2_20pct, "Risk Ratio", "1",
                    "(D) Risk Ratio")
+# dev.off()
+# 
+# pdf("Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
+#     height = 2, width = 10)
+create_figure_sens(figure_data2_20pct, "Odds Ratio", "1",
+                   "(E) Odds Ratio")
 # dev.off()
 
 ```
@@ -1320,6 +1390,13 @@ create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
                      "(D) Risk Ratio")
 dev.off()
 
+pdf("Bias Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_5pct, "Odds Ratio", "0.5",
+                     "(E) Odds Ratio")
+dev.off()
+
+
 ```
 
 ~20% of study participants are LTFU
@@ -1354,6 +1431,12 @@ pdf("Bias Risk ratio - Decrease risk of Preeclampsia - No sensitivity analyses -
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
                      "(D) Risk Ratio")
+dev.off()
+
+pdf("Bias Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_20pct, "Odds Ratio", "0.5",
+                     "(E) Odds Ratio")
 dev.off()
 
 ```
@@ -1394,6 +1477,12 @@ create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "1",
                      "(D) Risk Ratio")
 dev.off()
 
+pdf("Bias Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_5pct, "Odds Ratio", "1", 
+                     "(E) Odds Ratio")
+dev.off()
+
 ```
 
 
@@ -1428,6 +1517,12 @@ pdf("Bias Risk ratio - No effect risk of Preeclampsia - No sensitivity analyses 
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "1", 
                      "(D) Risk Ratio")
+dev.off()
+
+pdf("Bias Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_20pct, "Odds Ratio", "1", 
+                     "(E) Odds Ratio")
 dev.off()
 
 ```
@@ -1467,6 +1562,12 @@ create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "0.5",
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
                    "(D) Risk Ratio")
 # dev.off()
+# 
+# pdf("Bias Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_5pct, "Odds Ratio", "0.5",
+                   "(E) Odds Ratio")
+# dev.off()
 
 ```
 
@@ -1498,6 +1599,12 @@ create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "0.5",
 #     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
                    "(D) Risk Ratio")
+# dev.off()
+# 
+# pdf("Bias Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_20pct, "Odds Ratio", "0.5",
+                   "(E) Odds Ratio")
 # dev.off()
 
 ```
@@ -1534,6 +1641,12 @@ create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "1",
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "1",
                    "(D) Risk Ratio")
 # dev.off()
+# 
+# pdf("Bias Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_5pct, "Odds Ratio", "1",
+                   "(E) Odds Ratio")
+# dev.off()
 
 ```
 
@@ -1565,6 +1678,12 @@ create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "1",
 #     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "1",
                    "(D) Risk Ratio")
+# dev.off()
+# 
+# pdf("Bias Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_20pct, "Odds Ratio", "1",
+                   "(E) Odds Ratio")
 # dev.off()
 
 ```
@@ -1709,6 +1828,12 @@ create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
                      "(D) Risk Ratio")
 dev.off()
 
+pdf("Bias Odds ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_5pct, "Odds Ratio", "0.5",
+                     "(E) Odds Ratio")
+dev.off()
+
 ```
 
 ~20% of study participants are LTFU
@@ -1749,6 +1874,12 @@ create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
                      "(D) Risk Ratio")
 dev.off()
 
+pdf("Bias Odds Ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_20pct, "Odds Ratio", "0.5",
+                     "(E) Odds Ratio")
+dev.off()
+
 ```
 
 
@@ -1787,6 +1918,12 @@ create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "1",
                      "(D) Risk Ratio")
 dev.off()
 
+pdf("Bias Odds ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_5pct, "Odds Ratio", "1", 
+                     "(E) Odds Ratio")
+dev.off()
+
 ```
 
 
@@ -1821,6 +1958,12 @@ pdf("Bias Risk ratio by Missingness - No effect risk of Preeclampsia - No sensit
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "1", 
                      "(D) Risk Ratio")
+dev.off()
+
+pdf("Bias Odds ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
+    height = 2, width = 10)
+create_biasfigure_nosens(bias_figure_data2_20pct, "Odds Ratio", "1", 
+                     "(E) Odds Ratio")
 dev.off()
 
 ```
@@ -1860,6 +2003,12 @@ create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "0.5",
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
                    "(D) Risk Ratio")
 # dev.off()
+# 
+# pdf("Bias Odds Ratio by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_5pct, "Odds Ratio", "0.5",
+                   "(E) Odds Ratio")
+# dev.off()
 
 ```
 
@@ -1891,6 +2040,12 @@ create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "0.5",
 #     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
                    "(D) Risk Ratio")
+# dev.off()
+# 
+# pdf("Bias Odds Ratio by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_20pct, "Odds Ratio", "0.5",
+                   "(E) Odds Ratio")
 # dev.off()
 
 ```
@@ -1927,6 +2082,12 @@ create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "1",
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "1",
                    "(D) Risk Ratio")
 # dev.off()
+# 
+# pdf("Bias Odds Ratio by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_5pct, "Odds Ratio", "1",
+                   "(E) Odds Ratio")
+# dev.off()
 
 ```
 
@@ -1958,6 +2119,12 @@ create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "1",
 #     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "1",
                    "(D) Risk Ratio")
+# dev.off()
+# 
+# pdf("Bias Risk Ratio by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
+#     height = 2, width = 10)
+create_biasfigure_sens(bias_figure_data2_20pct, "Odds Ratio", "1",
+                   "(E) Odds Ratio")
 # dev.off()
 
 ```
