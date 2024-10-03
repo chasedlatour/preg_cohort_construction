@@ -19,23 +19,23 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       
       # Calculate the number per category
       n_low = sum(severity == 0),
-      n_low_perc = round(100*n_low/n(),2),
+      n_low_perc = round(100*n_low/n(), 0),
       n_med = sum(severity == 1),
-      n_med_perc = round(100*n_med/n(), 2),
+      n_med_perc = round(100*n_med/n(), 0),
       n_high = sum(severity == 2),
-      n_high_perc = round(100*n_high/n(), 2),
+      n_high_perc = round(100*n_high/n(), 0),
       
       # Preterm birth
       n_preterm_all = sum(pregout_t_pre_miss >= 18 & pregout_t_pre_miss < 35),
-      preterm_p = round(100*n_preterm_all / n(), 2),
+      preterm_p = round(100*n_preterm_all / n(), 0),
       
       # Distribution of outcomes
       n_miscarriage_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss < 18),
-      miscarriageall_p = round(100*n_miscarriage_all / n(),2),
+      miscarriageall_p = round(100*n_miscarriage_all / n(), 0),
       n_stillbirth_all = sum(pregout_pre_miss == "fetaldeath" & pregout_t_pre_miss >= 18),
-      stillbirthall_p = round(100*n_stillbirth_all/n(), 2),
+      stillbirthall_p = round(100*n_stillbirth_all/n(), 0),
       n_livebirth_all = sum(pregout_pre_miss == "livebirth"),
-      livebirthall_p = round(100*n_livebirth_all/n()),
+      livebirthall_p = round(100*n_livebirth_all/n(), 0),
       
       # Timing of those outcomes
       miscarriageall_p25 = quantile(pregout_t_pre_miss[pregout_pre_miss == "fetaldeath" &
@@ -64,22 +64,22 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       
       # Distribution of Preeclampsia
       n_preec_l32 = sum(preeclampsia_pre_miss == 1 & pregout_t_pre_miss < 30),
-      n_preec_l32_p = round(100*n_preec_l32/n(), 2),
+      n_preec_l32_p = round(100*n_preec_l32/n(), 0),
       n_preec = sum(preeclampsia_pre_miss == 1),
-      n_preec_perc = round(100*n_preec/n(),2),
+      n_preec_perc = round(100*n_preec/n(),0),
       preec_25 = quantile(pregout_t_pre_miss[preeclampsia_pre_miss == 1], probs=0.25)+2,
       preec_75 = quantile(pregout_t_pre_miss[preeclampsia_pre_miss == 1], probs=0.75)+2,
       preec_med = quantile(pregout_t_pre_miss[preeclampsia_pre_miss == 1], probs=0.50)+2,
       
       # Distribution of uncensored outcomes
       missing_mar = sum(ltfu_mar != "not"),
-      missing_mar_perc = round(100*missing_mar/n(), 2),
+      missing_mar_perc = round(100*missing_mar/n(), 0),
       missing_mar_p25 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.25)+2,
       missing_mar_p75 = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.75)+2,
       missing_mar_med = quantile(pregout_t_mar[ltfu_mar != "not"], probs = 0.5)+2,
       
       missing_mnar = sum(ltfu_mar_mnar != "not") - sum(ltfu_mar != "not"),
-      missing_mnar_perc = round(100*missing_mnar/n(), 2),
+      missing_mnar_perc = round(100*missing_mnar/n(), 0),
       missing_mnar_p25 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not" & ltfu_mar == "not"], probs=0.25)+2,
       missing_mnar_p75 = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not" & ltfu_mar == "not"], probs = 0.75)+2,
       missing_mnar_med = quantile(pregout_t_mar_mnar[ltfu_mar_mnar != "not" & ltfu_mar == "not"], probs = 0.5)+2,
@@ -92,9 +92,9 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       n_med = paste0(n_med," (", n_med_perc, "%)"),
       n_high = paste0(n_high," (", n_high_perc, "%)"),
       # Preterm birth
-      n_preterm_all = paste0(n_preterm_all, " (", preterm_p, ")%"),
+      n_preterm_all = paste0(n_preterm_all, " (", preterm_p, "%)"),
       # Pregnancy outcomes
-      n_miscarriage_all = paste0(n_miscarriage_all, " (", miscarriageall_p,")%"),
+      n_miscarriage_all = paste0(n_miscarriage_all, " (", miscarriageall_p,"%)"),
       n_stillbirth_all = paste0(n_stillbirth_all, " (", stillbirthall_p, "%)"),
       n_livebirth_all = paste0(n_livebirth_all, " (", livebirthall_p, "%)"),
       # Timing of Preg Outcomes
