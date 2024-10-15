@@ -28,6 +28,8 @@ First, we must read in the necessary data files.
 
 describe <- tar_read(all_descriptives)
 
+describe_analytic <- tar_read(all_descriptives_analytic)
+
 analyses <- tar_read(all_analyses)
 
 ```
@@ -51,6 +53,30 @@ describe_cohorts <- function(describe_subset){
                   valign = "top") %>%
     kable_classic()
   
+  return(hold)
+  
+}
+
+# Describe the number of pregnancies and observed preeclampsia events in each analytic sample
+
+describe_pregnancies <- function(describe_subset){
+  
+  hold <- describe_subset %>% 
+    select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
+           trt, n_pregnancies_deliveries, n_preeclampsia_deliveries, n_pregnancies_outcomes,
+           n_preeclampsia_outcomes, n_pregnancies_all, n_preeclampsia_all) %>% 
+    kbl() %>%
+    collapse_rows(col_names = c(marginal_p_miss_severity, marginal_p_miss_miscarriage),
+                  valign = "top") %>%
+    kable_classic() %>% 
+    add_header_above(
+      c("Missing probabilities" = 2,
+        "Treatment" = 1,
+        "Observed Deliveries" = 2,
+        "Observed Outcomes" = 2,
+        "Observed Pregnancies" = 2)
+    )
+    
   return(hold)
   
 }
@@ -697,6 +723,10 @@ describe %>%
   filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
   describe_cohorts()
 
+describe_analytic %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
+  describe_pregnancies()
+
 analyses2 %>% 
   filter(rr_abortion == 0.5 & rr_preec == 0.5) %>% 
   print_analysis_kable_del()
@@ -738,6 +768,10 @@ describe %>%
   filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
   describe_cohorts()
 
+describe_analytic %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
+  describe_pregnancies()
+
 analyses2 %>% 
   filter(rr_abortion == 1.0 & rr_preec == 0.5) %>% 
   print_analysis_kable_del()
@@ -777,6 +811,10 @@ describe %>%
   filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
   describe_cohorts()
 
+describe_analytic %>% 
+  filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
+  describe_pregnancies()
+
 analyses2 %>% 
   filter(rr_abortion == 2 & rr_preec == 0.5) %>% 
   print_analysis_kable_del()
@@ -815,6 +853,10 @@ analyses2 %>%
 describe %>% 
   filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
   describe_cohorts()
+
+describe_analytic %>% 
+  filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
+  describe_pregnancies()
 
 analyses2 %>% 
   filter(rr_abortion == 0.5 & rr_preec == 1.0) %>% 
@@ -857,6 +899,10 @@ describe %>%
   filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
   describe_cohorts()
 
+describe_analytic %>% 
+  filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
+  describe_pregnancies()
+
 analyses2 %>% 
   filter(rr_abortion == 1.0 & rr_preec == 1.0) %>% 
   print_analysis_kable_del()
@@ -895,6 +941,10 @@ analyses2 %>%
 describe %>% 
   filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
   describe_cohorts()
+
+describe_analytic %>% 
+  filter(rr_abortion == 2 & rr_preec == 1.0) %>% 
+  describe_pregnancies()
 
 analyses2 %>% 
   filter(rr_abortion == 2 & rr_preec == 1.0) %>% 

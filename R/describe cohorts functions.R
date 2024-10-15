@@ -132,3 +132,65 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
   return(hold)
   
 }
+
+
+# cohort_data <- tar_read(cohort_data_0.1_1.3_0.49_.0.2_7_0.5_1_Parameters_Abortion05_Preeclampsia1_EMM.xlsx_1_10000)
+
+describe_analytic <- function(cohort_data, rr_abortion, rr_preec,
+                              marginal_p_miss_severity, beta12,
+                              marginal_p_miss_miscarriage, gamma1,
+                              pnc_wk){
+  
+  # Number of pregnancies by treatment arm among observed deliveries
+  observed_deliveries <- cohort_data %>% 
+    filter(ltfu_mar_mnar == 'not' & pregout_t_mar_mnar >= 18) %>% 
+    group_by(trt) %>% 
+    summarize(
+      n_pregnancies_deliveries = n(),
+      n_preeclampsia_deliveries = sum(preeclampsia_mar_mnar)
+    )
+  
+  # Number of pregnancies by treatment arm among observed outcomes
+  observed_outcomes <- cohort_data %>% 
+    filter(ltfu_mar_mnar == 'not') %>% 
+    group_by(trt) %>% 
+    summarize(
+      n_pregnancies_outcomes = n(),
+      n_preeclampsia_outcomes = sum(preeclampsia_pre_miss)
+    )
+  
+  # Number of pregnancies by treatment arm among all pregnancies
+  observed_pregnancies <- cohort_data %>% 
+    group_by(trt) %>% 
+    summarize(
+      n_pregnancies_all = n(),
+      n_preeclampsia_all = sum(preeclampsia_pre_miss)
+    )
+  
+  observed_n <- left_join(observed_deliveries, observed_outcomes, by = "trt") %>% 
+    left_join(observed_pregnancies, by = "trt") %>% 
+    # Add in identifying variables
+    mutate(
+      rr_abortion = rr_abortion, 
+      rr_preec = rr_preec,
+      marginal_p_miss_severity = marginal_p_miss_severity, 
+      beta12 = beta12,
+      marginal_p_miss_miscarriage = marginal_p_miss_miscarriage, 
+      gamma1 = gamma1,
+      pnc_wk = pnc_wk
+    )
+  
+  return(observed_n)
+  
+}
+
+
+# cohort_data %>% 
+#   group_by(ltfu_mar_mnar, pregout_mar_mnar) %>% 
+#   summarize(
+#     n = n(),
+#     min = min(pregout_t_mar_mnar),
+#     max = max(pregout_t_mar_mnar),
+#     preeclampsia = sum(preeclampsia_pre_miss),
+#     preeclampsia_miss = sum(preeclampsia_mar_mnar)
+#   )

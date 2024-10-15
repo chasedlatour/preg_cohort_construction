@@ -44,7 +44,7 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       "_EMM.xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 5000000 #10000
+treatment_effects$n = 5000000 # 10000 # 
 
 
 # Create a dataset with the missing data parameters
@@ -98,10 +98,24 @@ list(
             pnc_wk = pnc_wk
           )
         ),
-        # Describe the data
+        # Describe the target populations
         targets::tar_target(
           described_data,
           describe_cohort(
+            cohort_data,
+            rr_abortion = rr_abortion,
+            rr_preec = rr_preec,
+            marginal_p_miss_severity = marginal_p_miss_severity,
+            beta12 = beta12,
+            marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
+            gamma1 = gamma1,
+            pnc_wk = pnc_wk
+          )
+        ),
+        # Describe the analytic samples
+        targets::tar_target(
+          described_analytic_data,
+          describe_analytic(
             cohort_data,
             rr_abortion = rr_abortion,
             rr_preec = rr_preec,
@@ -151,7 +165,7 @@ list(
             as_tibble()
         ),
         # ADDED
-        # Get the risks among all pregnancies, CCA among those with observed outcome
+        # Get the ORs among all pregnancies, CCA among those with observed outcome
         # but standardized to the EMM distribution at baseline
         targets::tar_target(
           all_preg_or,
@@ -268,10 +282,16 @@ list(
             )
         )
       ),
-      # Combine all of the descriptive statistics together
+      # Combine all of the descriptive statistics for the study samples togethert
       tarchetypes::tar_combine(
         scenario_descriptives,
         mapped2[["described_data"]],
+        command = dplyr::bind_rows(!!!.x)
+      ),
+      # Combine all of the descriptive statsitics for the analytic samples together
+      tarchetypes::tar_combine(
+        scenario_descriptives_analytic,
+        mapped2[["described_analytic_data"]],
         command = dplyr::bind_rows(!!!.x)
       ),
       # Combine all of the analyses together
@@ -287,6 +307,13 @@ list(
   tar_combine(
     all_descriptives,
     mapped1[["scenario_descriptives"]],
+    command = dplyr::bind_rows(!!!.x)
+  ),
+  
+  # Combine all of the descriptive pt2 results into one dataset
+  tar_combine(
+    all_descriptives_analytic,
+    mapped1[["scenario_descriptives_analytic"]],
     command = dplyr::bind_rows(!!!.x)
   ),
   
