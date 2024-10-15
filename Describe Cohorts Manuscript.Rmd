@@ -28,7 +28,21 @@ First, we must read in the necessary data files.
 
 describe <- tar_read(all_descriptives)
 
-describe_analytic <- tar_read(all_descriptives_analytic)
+describe_analytic1 <- tar_read(all_descriptives_analytic)
+
+describe_analytic <- describe %>% 
+  mutate(
+    n_low_num = as.double(str_extract(n_low, "^\\d+")),
+    n_med_num = as.double(str_extract(n_med, "^\\d+")),
+    n_high_num = as.double(str_extract(n_high, "^\\d+")),
+    n_total = n_low_num + n_med_num + n_high_num,
+    n_preec = as.double(str_extract(n_preeclampsia, "^\\d+")),
+  ) %>% 
+  select(trt, rr_abortion, rr_preec, marginal_p_miss_severity,
+         marginal_p_miss_miscarriage, n_total, n_preec) %>% 
+  left_join(describe_analytic1, by = c("trt", "rr_abortion", "rr_preec", 
+                                       "marginal_p_miss_severity", 
+                                       "marginal_p_miss_miscarriage"))
 
 analyses <- tar_read(all_analyses)
 
@@ -62,8 +76,9 @@ describe_cohorts <- function(describe_subset){
 describe_pregnancies <- function(describe_subset){
   
   hold <- describe_subset %>% 
+    mutate(marginal_p_miscarriage = marginal_p_miss_miscarriage / 4.9) %>% 
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
-           trt, n_pregnancies_deliveries, n_preeclampsia_deliveries, n_pregnancies_outcomes,
+           trt, n_total, n_preec, n_pregnancies_deliveries, n_preeclampsia_deliveries, n_pregnancies_outcomes,
            n_preeclampsia_outcomes, n_pregnancies_all, n_preeclampsia_all) %>% 
     kbl() %>%
     collapse_rows(col_names = c(marginal_p_miss_severity, marginal_p_miss_miscarriage),
@@ -72,6 +87,7 @@ describe_pregnancies <- function(describe_subset){
     add_header_above(
       c("Missing probabilities" = 2,
         "Treatment" = 1,
+        "Target Population" = 2,
         "Observed Deliveries" = 2,
         "Observed Outcomes" = 2,
         "Observed Pregnancies" = 2)
