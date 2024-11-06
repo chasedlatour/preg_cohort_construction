@@ -131,13 +131,13 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
   expected_sev = as.double(subset(data, trt == 0) %>% 
                              ungroup() %>% 
                              summarize(avg = mean(severity)))
-
+  
   # Calculate the weekly marginal severity for a total marginal probability of marginal_p_miss_severity
   ## Number of weeks between the end of follow-up and pnc_wk
   num_weeks <- 41 - pnc_wk
   ## Weekly probability that ltfu to maintain the marginal probability
   weekly_prob <- 1 - ((1-marginal_p_miss_severity)^(1/num_weeks))
-
+  
   ## Calculate intercept using balancing intercept for model
   b0_sev = -log((1/weekly_prob)-1) - (beta12 * expected_sev)
   
@@ -187,9 +187,9 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
       # Identify the first ltfu due to severity indicator that occurs after PNC week
       ## If none, then this is NA
       ltfu_sev = purrr::map_dbl(wks_missing_by_sev,
-                            ~ifelse(is.na(which(.x > pnc_wk)[1]),
-                                    NA,
-                                    .x[which(.x > pnc_wk)[1]])),
+                                ~ifelse(is.na(which(.x > pnc_wk)[1]),
+                                        NA,
+                                        .x[which(.x > pnc_wk)[1]])),
       
       # # Determine when the person was LTFU due to severity
       # ltfu_sev = runif(n = length(missing_by_sev), min = pnc_wk, max = pregout_t_pre_miss),
@@ -579,7 +579,7 @@ pnc_miss <- function(pnc_enc, ltfu_ind, t_preg_out, t_sev){
 logodds_to_p <- function(logodds){
   
   p <- exp(logodds)/(1 + exp(logodds))
-
+  
   return(p)
   
 }

@@ -1009,7 +1009,7 @@ Create the functions to output the figures.
 
 ```{r}
 
-create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title){
+create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title, y_min, y_max){
   
   param <- sym(parameter)
   # rr_abort <- sym(rr_abort)
@@ -1047,7 +1047,8 @@ create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title){
       # strip.text.x = element_text(size=2),
       # strip.placement = "outside"
     ) +
-    scale_colour_grey() 
+    scale_colour_grey() +
+    ylim(y_min, y_max)
   
   return(plot)
   
@@ -1057,7 +1058,8 @@ create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title){
 
 
 
-create_biasfigure_sens <- function(dataset, parameter, rr_preec, title){
+create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min, 
+                                   y_max){
   
   param <- sym(parameter)
   # rr_abort <- sym(rr_abort)
@@ -1095,7 +1097,8 @@ create_biasfigure_sens <- function(dataset, parameter, rr_preec, title){
           strip.text = element_text(size = 7.5),
           legend.spacing.y = unit(0, 'cm'),
           legend.key.height = unit(0.16, 'in')) +
-    scale_colour_grey() 
+    scale_colour_grey() +
+    ylim(y_min, y_max)
   
   return(plot)
   
@@ -1175,13 +1178,16 @@ pdf("Bias Risk Difference by Missingness - Decrease risk of Preeclampsia - No se
 create_biasfigure_nosens(bias_figure_data2_20pct, 
                          "Risk Difference", 
                          "0.5",
-                         "(A) Risk Difference")
+                         "(A) Risk Difference",
+                         -0.075,
+                         0.075)
 dev.off()
 
 pdf("Bias Risk Ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
-                     "(B) Risk Ratio")
+                     "(B) Risk Ratio",
+                     -0.3, 0.3)
 dev.off()
 
 # pdf("Bias Odds Ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
@@ -1261,13 +1267,15 @@ pdf("Bias Risk difference by Missingness - No effect risk of Preeclampsia - No s
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Difference", 
                      "1", 
-                     "(A) Risk Difference")
+                     "(A) Risk Difference",
+                     -0.2, 0.2)
 dev.off()
 
 pdf("Bias Risk ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "1", 
-                     "(B) Risk Ratio")
+                     "(B) Risk Ratio",
+                     -0.8, 0.8)
 dev.off()
 
 # pdf("Bias Odds ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
