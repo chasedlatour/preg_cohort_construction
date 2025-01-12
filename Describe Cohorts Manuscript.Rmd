@@ -1023,12 +1023,12 @@ create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title, y_min,
     geom_point(size = 3, position = position_dodge(0.5)) +
     facet_wrap(missing ~., nrow = 1, 
                labeller = labeller(missing = 
-                                     c("0/0.05" = "All MNAR: 0% Severity, 5% Miscarriage",
-                                       "0.025/0.025" = "MAR+MNAR: 2.5% Severity, 2.5% Miscarriage",
-                                       "0.05/0" = " All MNAR: 5% Severity, 0% Miscarriage",
-                                       "0/0.2" = "All MNAR: 0% Severity, 20% Miscarriage",
-                                       "0.1/0.1" = "MAR+MNAR: 10% Severity, 10% Miscarriage",
-                                       "0.2/0" = "All MAR: 20% Severity, 0% Miscarriage"))) +
+                                     c("0/0.05" = "All MNAR: 0% Severity, 100% Miscarriage",
+                                       "0.025/0.025" = "MAR+MNAR: 50% Severity, 50% Miscarriage",
+                                       "0.05/0" = " All MNAR: 100% Severity, 0% Miscarriage",
+                                       "0/0.2" = "All MNAR: 0% Severity, 100% Miscarriage",
+                                       "0.1/0.1" = "MAR+MNAR: 50% Severity, 50% Miscarriage",
+                                       "0.2/0" = "All MAR: 100% Severity, 0% Miscarriage"))) +
     geom_hline(aes(yintercept = 0), col = "black", linetype = "dashed") +
     xlab("Effect of Initiation on the Risk of Miscarriage") + 
     ylab("Bias") +
@@ -1075,13 +1075,20 @@ create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min,
     ggplot(aes(x = scenario, y = value, color = Cohort, shape = Analysis)) + # , shape = cohort
     geom_point(size = 2, position = position_dodge(0.5)) +
     facet_wrap(missing ~., nrow = 1, 
+               # labeller = labeller(missing = 
+               #                       c("0/0.05" = "All MNAR: 0% Severity, 5% Miscarriage",
+               #                         "0.025/0.025" = "MAR+MNAR: 2.5% Severity, 2.5% Miscarriage",
+               #                         "0.05/0" = " All MNAR: 5% Severity, 0% Miscarriage",
+               #                         "0/0.2" = "All MNAR: 0% Severity, 20% Miscarriage",
+               #                         "0.1/0.1" = "MAR+MNAR: 10% Severity, 10% Miscarriage",
+               #                         "0.2/0" = "All MAR: 20% Severity, 0% Miscarriage"))) +
                labeller = labeller(missing = 
-                                     c("0/0.05" = "All MNAR: 0% Severity, 5% Miscarriage",
-                                       "0.025/0.025" = "MAR+MNAR: 2.5% Severity, 2.5% Miscarriage",
-                                       "0.05/0" = " All MNAR: 5% Severity, 0% Miscarriage",
-                                       "0/0.2" = "All MNAR: 0% Severity, 20% Miscarriage",
-                                       "0.1/0.1" = "MAR+MNAR: 10% Severity, 10% Miscarriage",
-                                       "0.2/0" = "All MAR: 20% Severity, 0% Miscarriage"))) +
+                                     c("0/0.05" = "All MNAR: 0% Severity, 100% Miscarriage",
+                                       "0.025/0.025" = "MAR+MNAR: 50% Severity, 50% Miscarriage",
+                                       "0.05/0" = " All MNAR: 100% Severity, 0% Miscarriage",
+                                       "0/0.2" = "All MNAR: 0% Severity, 100% Miscarriage",
+                                       "0.1/0.1" = "MAR+MNAR: 50% Severity, 50% Miscarriage",
+                                       "0.2/0" = "All MAR: 100% Severity, 0% Miscarriage"))) +
     geom_hline(aes(yintercept = 0), col = "black", linetype = "dashed") +
     xlab("Effect of Initiation on the Risk of Miscarriage") + 
     ylab("Bias") +
@@ -1120,7 +1127,8 @@ pdf("Bias Risk by Missingness - Initiators - Decrease risk of Preeclampsia - No 
 create_biasfigure_nosens(bias_figure_data2_5pct, 
               "Risk, Initiators", 
               "0.5",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              y_min=-0.13, y_max = 0.13)
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
@@ -1128,13 +1136,14 @@ pdf("Bias Risk by Missingness - Non-Initiators - Decrease risk of Preeclampsia -
 create_biasfigure_nosens(bias_figure_data2_5pct,
                 "Risk, Non-Initiators", 
                 "0.5",
-                "(B) Risk, Non-Initiators")
+                "(B) Risk, Non-Initiators",
+                y_min=-0.13, y_max = 0.13)
 dev.off()
 
 pdf("Bias Risk by Missingness difference - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Difference", "0.5",
-                     "(C) Risk Difference")
+                     "(C) Risk Difference", y_min=-0.06, y_max=0.06)
 dev.off()
 
 pdf("Bias Risk ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
@@ -1321,12 +1330,6 @@ pdf("Bias Risk Ratio by Missingness - Decrease risk of Preeclampsia - Sensitivit
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
                    "(D) Risk Ratio")
 dev.off()
-
-# pdf("Bias Odds Ratio by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-# create_biasfigure_sens(bias_figure_data2_5pct, "Odds Ratio", "0.5",
-#                    "(E) Odds Ratio")
-# dev.off()
 
 ```
 
