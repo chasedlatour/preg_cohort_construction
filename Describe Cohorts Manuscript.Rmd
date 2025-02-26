@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(targets)
 library(tidyverse)
 library(kableExtra)
+
 ```
 
 # Objetives
@@ -122,41 +123,41 @@ analyses2 <- analyses %>%
   unnest(c(truth, observed_del, observed_out, tte, all_preg_or, # ADDED
            all_outc, trt_outc, untrt_outc, no_outc)) %>% 
   mutate(
-    obs_del_risk0_bias = obs_del_risk0 - truth_risk0,
-    obs_del_risk1_bias = obs_del_risk1 - truth_risk1,
-    obs_del_rd_bias = obs_del_rd - truth_rd,
+    obs_del_risk0_bias = 100*(obs_del_risk0 - truth_risk0),
+    obs_del_risk1_bias = 100*(obs_del_risk1 - truth_risk1),
+    obs_del_rd_bias = 100*(obs_del_rd - truth_rd),
     obs_del_rr_bias = log(obs_del_rr) - log(truth_rr),
     obs_del_or_bias = log(obs_del_or) - log(truth_or),
-    obs_out_risk0_bias = obs_out_risk0 - truth_risk0,
-    obs_out_risk1_bias = obs_out_risk1 - truth_risk1,
-    obs_out_rd_bias = obs_out_rd - truth_rd,
+    obs_out_risk0_bias = 100*(obs_out_risk0 - truth_risk0),
+    obs_out_risk1_bias = 100*(obs_out_risk1 - truth_risk1),
+    obs_out_rd_bias = 100*(obs_out_rd - truth_rd),
     obs_out_rr_bias = log(obs_out_rr) - log(truth_rr),
     obs_out_or_bias = log(obs_out_or) - log(truth_or),
-    all_preg_risk0_bias = all_preg_risk0 - truth_risk0,
-    all_preg_risk1_bias = all_preg_risk1 - truth_risk1,
-    all_preg_rd_bias = all_preg_rd - truth_rd,
+    all_preg_risk0_bias = 100*(all_preg_risk0 - truth_risk0),
+    all_preg_risk1_bias = 100*(all_preg_risk1 - truth_risk1),
+    all_preg_rd_bias = 100*(all_preg_rd - truth_rd),
     all_preg_rr_bias = log(all_preg_rr) - log(truth_rr),
     all_preg_or_bias = log(all_preg_or_or) - log(truth_or),
     
     # Add in the bias for the sensitivity analyses
-    all_preg_all_outc_risk0_bias = all_preg_all_outc_risk0 - truth_risk0,
-    all_preg_all_outc_risk1_bias = all_preg_all_outc_risk1 - truth_risk1,
-    all_preg_all_outc_rd_bias = all_preg_all_outc_rd - truth_rd,
+    all_preg_all_outc_risk0_bias = 100*(all_preg_all_outc_risk0 - truth_risk0),
+    all_preg_all_outc_risk1_bias = 100*(all_preg_all_outc_risk1 - truth_risk1),
+    all_preg_all_outc_rd_bias = 100*(all_preg_all_outc_rd - truth_rd),
     all_preg_all_outc_rr_bias = log(all_preg_all_outc_rr) - log(truth_rr),
     
-    trt_preg_outc_risk0_bias = trt_preg_outc_risk0 - truth_risk0,
-    trt_preg_outc_risk1_bias = trt_preg_outc_risk1 - truth_risk1,
-    trt_preg_outc_rd_bias = trt_preg_outc_rd - truth_rd,
+    trt_preg_outc_risk0_bias = 100*(trt_preg_outc_risk0 - truth_risk0),
+    trt_preg_outc_risk1_bias = 100*(trt_preg_outc_risk1 - truth_risk1),
+    trt_preg_outc_rd_bias = 100*(trt_preg_outc_rd - truth_rd),
     trt_preg_outc_rr_bias = log(trt_preg_outc_rr) - log(truth_rr),
     
-    untrt_preg_outc_risk0_bias = untrt_preg_outc_risk0 - truth_risk0,
-    untrt_preg_outc_risk1_bias = untrt_preg_outc_risk1 - truth_risk1,
-    untrt_preg_outc_rd_bias = untrt_preg_outc_rd - truth_rd,
+    untrt_preg_outc_risk0_bias = 100*(untrt_preg_outc_risk0 - truth_risk0),
+    untrt_preg_outc_risk1_bias = 100*(untrt_preg_outc_risk1 - truth_risk1),
+    untrt_preg_outc_rd_bias = 100*(untrt_preg_outc_rd - truth_rd),
     untrt_preg_outc_rr_bias = log(untrt_preg_outc_rr) - log(truth_rr),
 
-    all_preg_no_outc_risk0_bias = all_preg_no_outc_risk0 - truth_risk0,
-    all_preg_no_outc_risk1_bias = all_preg_no_outc_risk1 - truth_risk1,
-    all_preg_no_outc_rd_bias = all_preg_no_outc_rd - truth_rd,
+    all_preg_no_outc_risk0_bias = 100*(all_preg_no_outc_risk0 - truth_risk0),
+    all_preg_no_outc_risk1_bias = 100*(all_preg_no_outc_risk1 - truth_risk1),
+    all_preg_no_outc_rd_bias = 100*(all_preg_no_outc_rd - truth_rd),
     all_preg_no_outc_rr_bias = log(all_preg_no_outc_rr) - log(truth_rr)
     
   ) %>% 
@@ -1009,7 +1010,7 @@ Create the functions to output the figures.
 
 ```{r}
 
-create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title, y_min, y_max){
+create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title, y_min, y_max, parameter_yaxis = "Risk Difference (per 100)"){
   
   param <- sym(parameter)
   # rr_abort <- sym(rr_abort)
@@ -1031,7 +1032,7 @@ create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title, y_min,
                                        "0.2/0" = "All MAR: 100% Severity, 0% Miscarriage"))) +
     geom_hline(aes(yintercept = 0), col = "black", linetype = "dashed") +
     xlab("Effect of Initiation on the Risk of Miscarriage") + 
-    ylab("Bias") +
+    ylab(paste0("Bias in the\n", parameter_yaxis)) +
     ggtitle(title) +
     scale_x_discrete(labels = c(
       "Decrease risk of miscarriage" = "Decrease",
@@ -1043,6 +1044,7 @@ create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title, y_min,
       legend.title = element_text(size = 8),
       legend.text = element_text(size = 8),
       strip.text = element_text(size = 7.5),
+      axis.title.y = element_text(size = 9)
       # strip.text.x.top = element_text(size=1),
       # strip.text.x = element_text(size=2),
       # strip.placement = "outside"
@@ -1058,12 +1060,68 @@ create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title, y_min,
 
 
 
-create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min, 
-                                   y_max){
+create_biasfigure_nosens_supp <- function(dataset, parameter, rr_preec, title, y_min, y_max, parameter_yaxis = "Risk Difference (per 100)"){
   
   param <- sym(parameter)
   # rr_abort <- sym(rr_abort)
   rr_preeclampsia <- sym(rr_preec)
+  
+  wong_colors <- c("#000000", "#E69F00", "#56B4E9")
+  
+  plot <- dataset %>%
+    filter(!grepl("Sens", Cohort)) %>% 
+    filter(rr_preec == rr_preeclampsia) %>%
+    filter(parameter == param) %>% 
+    ggplot(aes(x = scenario, y = value, color = Cohort, shape = Cohort)) + # , shape = cohort
+    geom_point(size = 3, position = position_dodge(0.5)) +
+    facet_wrap(missing ~., nrow = 1, 
+               labeller = labeller(missing = 
+                                     c("0/0.05" = "All MNAR: 0% Severity, 100% Miscarriage",
+                                       "0.025/0.025" = "MAR+MNAR: 50% Severity, 50% Miscarriage",
+                                       "0.05/0" = " All MNAR: 100% Severity, 0% Miscarriage",
+                                       "0/0.2" = "All MNAR: 0% Severity, 100% Miscarriage",
+                                       "0.1/0.1" = "MAR+MNAR: 50% Severity, 50% Miscarriage",
+                                       "0.2/0" = "All MAR: 100% Severity, 0% Miscarriage"))) +
+    geom_hline(aes(yintercept = 0), col = "black", linetype = "dashed") +
+    xlab("Effect of Initiation on the Risk of Miscarriage") + 
+    ylab(paste0("Bias in the\n", parameter_yaxis)) +
+    ggtitle(title) +
+    scale_x_discrete(labels = c(
+      "Decrease risk of miscarriage" = "Decrease",
+      "No effect on risk of miscarriage" = "None",
+      "Increase risk of miscarriage" = "Increase"
+    )) +
+    theme_bw() +
+    theme(
+      legend.title = element_text(size = 8),
+      legend.text = element_text(size = 8),
+      strip.text = element_text(size = 7.5),
+      axis.title.y = element_text(size = 9)
+      # strip.text.x.top = element_text(size=1),
+      # strip.text.x = element_text(size=2),
+      # strip.placement = "outside"
+    ) +
+    # scale_colour_grey() +
+    # scale_color_viridis_d(option="F") +
+    ylim(y_min, y_max) +
+    scale_color_manual(values = wong_colors)
+  
+  return(plot)
+  
+}
+
+
+
+
+
+create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min, 
+                                   y_max, parameter_yaxis="Risk Difference"){
+  
+  param <- sym(parameter)
+  # rr_abort <- sym(rr_abort)
+  rr_preeclampsia <- sym(rr_preec)
+  
+  wong_colors <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#0072B2","#D55E00","#CC79A7")
   
   plot <- dataset %>%
     # filter(!grepl("Sens", Cohort)) %>% 
@@ -1075,13 +1133,6 @@ create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min,
     ggplot(aes(x = scenario, y = value, color = Cohort, shape = Analysis)) + # , shape = cohort
     geom_point(size = 2, position = position_dodge(0.5)) +
     facet_wrap(missing ~., nrow = 1, 
-               # labeller = labeller(missing = 
-               #                       c("0/0.05" = "All MNAR: 0% Severity, 5% Miscarriage",
-               #                         "0.025/0.025" = "MAR+MNAR: 2.5% Severity, 2.5% Miscarriage",
-               #                         "0.05/0" = " All MNAR: 5% Severity, 0% Miscarriage",
-               #                         "0/0.2" = "All MNAR: 0% Severity, 20% Miscarriage",
-               #                         "0.1/0.1" = "MAR+MNAR: 10% Severity, 10% Miscarriage",
-               #                         "0.2/0" = "All MAR: 20% Severity, 0% Miscarriage"))) +
                labeller = labeller(missing = 
                                      c("0/0.05" = "All MNAR: 0% Severity, 100% Miscarriage",
                                        "0.025/0.025" = "MAR+MNAR: 50% Severity, 50% Miscarriage",
@@ -1091,7 +1142,7 @@ create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min,
                                        "0.2/0" = "All MAR: 100% Severity, 0% Miscarriage"))) +
     geom_hline(aes(yintercept = 0), col = "black", linetype = "dashed") +
     xlab("Effect of Initiation on the Risk of Miscarriage") + 
-    ylab("Bias") +
+    ylab(paste0("Bias in the\n", parameter_yaxis)) +
     ggtitle(title) +
     scale_x_discrete(labels = c(
       "Decrease risk of miscarriage" = "Decrease",
@@ -1103,8 +1154,11 @@ create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min,
           legend.text = element_text(size = 6),
           strip.text = element_text(size = 7.5),
           legend.spacing.y = unit(0, 'cm'),
-          legend.key.height = unit(0.16, 'in')) +
-    scale_colour_grey() +
+          legend.key.height = unit(0.16, 'in'),
+          axis.title.y = element_text(size = 9)) +
+    # scale_colour_grey() +
+    # scale_color_viridis_d() +
+    scale_color_manual(values = wong_colors) +
     ylim(y_min, y_max)
   
   return(plot)
@@ -1124,32 +1178,37 @@ create_biasfigure_sens <- function(dataset, parameter, rr_preec, title, y_min,
 
 pdf("Bias Risk by Missingness - Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, 
+create_biasfigure_nosens_supp(bias_figure_data2_5pct, 
               "Risk, Initiators", 
               "0.5",
               "(A) Risk, Initiators",
-              y_min=-0.13, y_max = 0.13)
+              y_min=-13, y_max = 13,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct,
+create_biasfigure_nosens_supp(bias_figure_data2_5pct,
                 "Risk, Non-Initiators", 
                 "0.5",
                 "(B) Risk, Non-Initiators",
-                y_min=-0.13, y_max = 0.13)
+                y_min=-13, y_max = 13,
+                "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness difference - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Difference", "0.5",
-                     "(C) Risk Difference", y_min=-0.06, y_max=0.06)
+create_biasfigure_nosens_supp(bias_figure_data2_5pct, "Risk Difference", "0.5",
+                     "(C) Risk Difference", y_min=-6, y_max=6,
+                     "Risk Difference (per 100)")
 dev.off()
 
 pdf("Bias Risk ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
-                     "(D) Risk Ratio")
+create_biasfigure_nosens_supp(bias_figure_data2_5pct, "Risk Ratio", "0.5",
+                     "(D) Risk Ratio",
+                     y_min=-0.25, y_max=0.25,
+                     "Risk Ratio (Log-Transformed)")
 dev.off()
 
 # pdf("Bias Odds ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
@@ -1168,18 +1227,22 @@ dev.off()
 
 pdf("Bias Risk by Missingness - Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, 
+create_biasfigure_nosens_supp(bias_figure_data2_20pct, 
               "Risk, Initiators", 
               "0.5",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              y_min=-15, y_max = 15,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct,
+create_biasfigure_nosens_supp(bias_figure_data2_20pct,
                 "Risk, Non-Initiators", 
                 "0.5",
-                "(B) Risk, Non-Initiators")
+                "(B) Risk, Non-Initiators",
+                y_min=-15, y_max = 15,
+                "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk Difference by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
@@ -1188,15 +1251,17 @@ create_biasfigure_nosens(bias_figure_data2_20pct,
                          "Risk Difference", 
                          "0.5",
                          "(A) Risk Difference",
-                         -0.075,
-                         0.075)
+                         -7.5,
+                         7.5,
+                         "Risk Difference (per 100)")
 dev.off()
 
 pdf("Bias Risk Ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
                      "(B) Risk Ratio",
-                     -0.3, 0.3)
+                     -0.3, 0.3,
+                     "Risk Ratio (Log-Transformed)")
 dev.off()
 
 # pdf("Bias Odds Ratio by Missingness - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
@@ -1216,31 +1281,38 @@ dev.off()
 
 pdf("Bias Risk by Missingness - Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct , 
+create_biasfigure_nosens_supp(bias_figure_data2_5pct , 
               "Risk, Initiators", 
               "1",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              -25, 25,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct,
+create_biasfigure_nosens_supp(bias_figure_data2_5pct,
                        "Risk, Non-Initiators", 
                 "1",
-                "(B) Risk, Non-Initiators")
+                "(B) Risk, Non-Initiators",
+                -25, 25,
+                "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk difference by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Difference", 
+create_biasfigure_nosens_supp(bias_figure_data2_5pct, "Risk Difference", 
                      "1", 
-                     "(C) Risk Difference")
+                     "(C) Risk Difference",
+                     -20, 20,
+                     "Risk Difference (per 100)")
 dev.off()
 
-pdf("Bias Risk ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "1", 
-                     "(D) Risk Ratio")
+pdf("Bias Risk ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf", height = 2, width = 10)
+create_biasfigure_nosens_supp(bias_figure_data2_5pct, "Risk Ratio", "1", 
+                     "(D) Risk Ratio",
+                     -0.75, 0.75,
+                     "Risk Ratio (Log-Scaled)")
 dev.off()
 
 # pdf("Bias Odds ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
@@ -1258,18 +1330,22 @@ dev.off()
 
 pdf("Bias Risk by Missingness - Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, 
+create_biasfigure_nosens_supp(bias_figure_data2_20pct, 
               "Risk, Initiators", 
               "1",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              -25, 25,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct,
+create_biasfigure_nosens_supp(bias_figure_data2_20pct,
                      "Risk, Non-Initiators", 
                      "1",
-                     "(B) Risk, Non-Initiators")
+                     "(B) Risk, Non-Initiators",
+                     -25, 25,
+                     "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk difference by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
@@ -1277,14 +1353,16 @@ pdf("Bias Risk difference by Missingness - No effect risk of Preeclampsia - No s
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Difference", 
                      "1", 
                      "(A) Risk Difference",
-                     -0.2, 0.2)
+                     -20, 20,
+                     "Risk Difference (per 100)")
 dev.off()
 
 pdf("Bias Risk ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "1", 
                      "(B) Risk Ratio",
-                     -0.8, 0.8)
+                     -0.8, 0.8,
+                     "Risk Ratio (Log-Scaled)")
 dev.off()
 
 # pdf("Bias Odds ratio by Missingness - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
@@ -1308,7 +1386,9 @@ pdf("Bias Risk by Missingness - Initiators - Decrease risk of Preeclampsia - Sen
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_5pct, 
               "Risk, Initiators", "0.5",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              -12, 12,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
@@ -1316,19 +1396,25 @@ pdf("Bias Risk by Missingness - Non-Initiators - Decrease risk of Preeclampsia -
 create_biasfigure_sens(bias_figure_data2_5pct,
                    "Risk, Non-Initiators", 
                    "0.5",
-                   "(B) Risk, Non-Initiators")
+                   "(B) Risk, Non-Initiators",
+                   -12, 12,
+                   "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk Difference by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "0.5",
-                   "(C) Risk Difference")
+                   "(C) Risk Difference",
+                   -12, 12,
+                   "Risk Difference (per 100)")
 dev.off()
 
 pdf("Bias Risk Ratio by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
-                   "(D) Risk Ratio")
+                   "(D) Risk Ratio",
+                   -0.5, 0.5,
+                   "Risk Ratio (Log-Transformed)")
 dev.off()
 
 ```
@@ -1341,26 +1427,34 @@ pdf("Bias Risk by Missingness - Initiators - Decrease risk of Preeclampsia - Sen
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, 
               "Risk, Initiators", "0.5",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              -45, 45,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct,
                        "Risk, Non-Initiators", "0.5",
-                "(B) Risk, Non-Initiators")
+                "(B) Risk, Non-Initiators",
+                -45, 45,
+                "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk Difference by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "0.5",
-                   "(C) Risk Difference")
+                   "(C) Risk Difference",
+                   -45, 45,
+                   "Risk Difference (per 100)")
 dev.off()
 
 pdf("Bias Risk Ratio by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
-                   "(D) Risk Ratio")
+                   "(D) Risk Ratio",
+                   -1.2, 1.2,
+                   "Risk Ratio (Log-Transformed)")
 dev.off()
 
 # pdf("Bias Odds Ratio by Missingness - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
@@ -1381,7 +1475,9 @@ pdf("Bias Risk by Missingness - Initiators - No effect risk of Preeclampsia - Se
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_5pct, 
               "Risk, Initiators", "1",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              -25, 25,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
@@ -1389,19 +1485,25 @@ pdf("Bias Risk by Missingness - Non-Initiators - No effect risk of Preeclampsia 
 create_biasfigure_sens(bias_figure_data2_5pct,
                    "Risk, Non-Initiators", 
                    "1",
-                   "(B) Risk, Non-Initiators")
+                   "(B) Risk, Non-Initiators",
+                   -25, 25,
+                   "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk Difference by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "1",
-                   "(C) Risk Difference")
+                   "(C) Risk Difference",
+                   -20, 20,
+                   "Risk Difference (per 100)")
 dev.off()
 
 pdf("Bias Risk Ratio by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "1",
-                   "(D) Risk Ratio")
+                   "(D) Risk Ratio",
+                   -0.8, 0.8,
+                   "Risk Ratio (Log Transformed)")
 dev.off()
 
 # # pdf("Bias Odds Ratio by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
@@ -1420,26 +1522,34 @@ pdf("Bias Risk by Missingness - Initiators - No effect risk of Preeclampsia - Se
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, 
               "Risk, Initiators", "1",
-              "(A) Risk, Initiators")
+              "(A) Risk, Initiators",
+              -60, 60,
+              "Risk, Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk by Missingness - Non-Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct,
                        "Risk, Non-Initiators", "1",
-                "(B) Risk, Non-Initiators")
+                "(B) Risk, Non-Initiators",
+                -60, 60,
+                "Risk, Non-Initiators\n(Percentage Points)")
 dev.off()
 
 pdf("Bias Risk Difference by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "1",
-                   "(C) Risk Difference")
+                   "(C) Risk Difference",
+                   -60, 60,
+                   "Risk Difference (per 100)")
 dev.off()
 
 pdf("Bias Risk Ratio by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
     height = 2, width = 10)
 create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "1",
-                   "(D) Risk Ratio")
+                   "(D) Risk Ratio",
+                   -1.6, 1.6,
+                   "Risk Ratio (Log-Transformed)")
 dev.off()
 
 # # pdf("Bias Risk Ratio by Missingness - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
@@ -1449,860 +1559,5 @@ dev.off()
 # # dev.off()
 
 ```
-
-
-
-
-
-# OLD CODE
-
-Saved in case needed later.
-
-# Figures: Parameter Estimates by Effect on Miscarriage
-
-Create the functions to output the figures.
-
-```{r eval=FALSE}
-
-# create_figure_nosens <- function(dataset, parameter, rr_preec, title){
-#   
-#   param <- sym(parameter)
-#   # rr_abort <- sym(rr_abort)
-#   rr_preeclampsia <- sym(rr_preec)
-#   
-#   plot <- dataset %>%
-#     filter(!grepl("Sens", Cohort)) %>% 
-#     filter(rr_preec == rr_preeclampsia) %>%
-#     filter(parameter == param) %>% 
-#     ggplot(aes(x = missing, y = value, color = Cohort, shape = Cohort)) + # , shape = cohort
-#     geom_point(size = 3, position = position_dodge(0.5)) +
-#     facet_wrap(scenario ~., nrow = 1) +
-#     geom_hline(aes(yintercept = truth), col = "black", linetype = "dashed") + 
-#     # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
-#     #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
-#     xlab("Approximate Percent Missing Due to Severity|Abortion") + 
-#     ylab("Parameter Estimate") +
-#     ggtitle(title) +
-#     scale_x_discrete(labels = c(
-#       "0/0.05" = "0|5", "0.025/0.025" = "2.5|2.5", "0.05/0" = "5|0",
-#       "0/0.2" = "0|20", "0.1/0.1" = "10|10", "0.2/0" = "20|0"
-#     )) +
-#     theme(legend.title = element_text(size = 8), 
-#           legend.text = element_text(size = 8)) +
-#     scale_colour_grey() +
-#     theme_bw()
-#   
-#   if (parameter == "Risk Ratio" | parameter == "Odds Ratio") {
-#     plot <- plot + scale_y_log10() 
-#   }
-#   
-#   return(plot)
-#   
-# }
-# 
-# 
-# 
-# create_figure_sens <- function(dataset, parameter, rr_preec, title){
-#   
-#   param <- sym(parameter)
-#   # rr_abort <- sym(rr_abort)
-#   rr_preeclampsia <- sym(rr_preec)
-#   
-#   plot <- dataset %>%
-#     # filter(!grepl("Sens", Cohort)) %>% 
-#     mutate(Analysis = ifelse(grepl("Sens", Cohort),
-#                              "Sensitivity Analysis",
-#                              "Primary Analysis")) %>% 
-#     filter(rr_preec == rr_preeclampsia) %>%
-#     filter(parameter == param) %>% 
-#     ggplot(aes(x = missing, y = value, color = Cohort, shape = Analysis)) + # , shape = cohort
-#     geom_point(size = 3, position = position_dodge(0.5)) +
-#     facet_wrap(scenario ~., nrow = 1) +
-#     geom_hline(aes(yintercept = truth), col = "black", linetype = "dashed") + 
-#     # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
-#     #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
-#     xlab("Approximate Percent Missing Due to Severity|Abortion") + 
-#     ylab("Parameter Estimate") +
-#     ggtitle(title) +
-#     scale_x_discrete(labels = c(
-#       "0/0.05" = "0|5", "0.025/0.025" = "2.5|2.5", "0.05/0" = "5|0",
-#       "0/0.2" = "0|20", "0.1/0.1" = "10|10", "0.2/0" = "20|0"
-#     )) +
-#     scale_colour_grey() +
-#     theme_bw()
-#   
-#   if (parameter == "Risk Ratio" | parameter == "Odds Ratio") {
-#     plot <- plot + scale_y_log10() 
-#   }
-#   
-#   return(plot)
-#   
-# }
-
-
-```
-
-## Without Sensitivity Analyses
-
-### Initiation Decreases Risk of Preeclampsia
-
-~5% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# # pdf("Risk - Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct %>% 
-#                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
-#                          Cohort != "Sens: Untrt Pregnancies Outcome"), 
-#               "Risk, Initiators", 
-#               "0.5",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct%>% 
-#                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
-#                          Cohort != "Sens: Untrt Pregnancies Outcome"),
-#                 "Risk, Non-Initiators", 
-#                 "0.5",
-#                 "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk difference - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct, "Risk Difference", "0.5",
-#                      "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct, "Risk Ratio", "0.5",
-#                      "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # pdf("Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct, "Odds Ratio", "0.5",
-#                      "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-~20% of study participants are LTFU
-
-```{r eval=FALSE}
-
-
-# # pdf("Risk - Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct %>% 
-#                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
-#                          Cohort != "Sens: Untrt Pregnancies Outcome"), 
-#               "Risk, Initiators", 
-#               "0.5",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct%>% 
-#                 filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
-#                          Cohort != "Sens: Untrt Pregnancies Outcome"),
-#                 "Risk, Non-Initiators", 
-#                 "0.5",
-#                 "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk difference - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct, "Risk Difference", "0.5",
-#                      "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct, "Risk Ratio", "0.5",
-#                      "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # pdf("Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct, "Odds Ratio", "0.5",
-#                      "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-
-### Initiation Does not Affect Risk of Preeclampsia
-
-~5% of the study population are LTFU.
-
-```{r eval=FALSE}
-
-# # pdf("Risk - Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct , 
-#               "Risk, Initiators", 
-#               "1",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct,
-#                        "Risk, Non-Initiators", 
-#                 "1",
-#                 "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk difference - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct, "Risk Difference", 
-#                      "1", 
-#                      "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk ratio - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct, "Risk Ratio", "1", 
-#                      "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # 
-# # pdf("Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_5pct, "Odds Ratio", "1", 
-#                      "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-
-~20% of the study population are LTFU.
-
-```{r eval=FALSE}
-
-# # pdf("Risk - Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct, 
-#               "Risk, Initiators", 
-#               "1",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct,
-#                      "Risk, Non-Initiators", 
-#                      "1",
-#                      "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk difference - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct, "Risk Difference", 
-#                      "1", 
-#                      "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk ratio - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct, "Risk Ratio", "1", 
-#                      "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # pdf("Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_nosens(figure_data2_20pct, "Odds Ratio", "1", 
-#                      "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-
-## With Sensitivity Analyses
-
-### Initiation Decreases Risk of Preeclampsia
-
-~5% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# # pdf("Risk - Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, 
-#               "Risk, Initiators", "0.5",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct,
-#                    "Risk, Non-Initiators", 
-#                    "0.5",
-#                    "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk Difference - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, "Risk Difference", "0.5",
-#                    "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, "Risk Ratio", "0.5",
-#                    "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # pdf("Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, "Odds Ratio", "0.5",
-#                    "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-~20% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# # pdf("Risk - Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, 
-#               "Risk, Initiators", "0.5",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct,
-#                        "Risk, Non-Initiators", "0.5",
-#                 "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk Difference - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, "Risk Difference", "0.5",
-#                    "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, "Risk Ratio", "0.5",
-#                    "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # pdf("Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, "Odds Ratio", "0.5",
-#                    "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-### Initiation Does not Affect Risk of Preeclampsia
-
-~5% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# # pdf("Risk - Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, 
-#               "Risk, Initiators", "1",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct,
-#                    "Risk, Non-Initiators", 
-#                    "1",
-#                    "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk Difference - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, "Risk Difference", "1",
-#                    "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, "Risk Ratio", "1",
-#                    "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # pdf("Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_5pct, "Odds Ratio", "1",
-#                    "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-~20% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# # pdf("Risk - Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, 
-#               "Risk, Initiators", "1",
-#               "(A) Risk, Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk - Non-Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct,
-#                        "Risk, Non-Initiators", "1",
-#                 "(B) Risk, Non-Initiators")
-# # dev.off()
-# # 
-# # pdf("Risk Difference - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, "Risk Difference", "1",
-#                    "(C) Risk Difference")
-# # dev.off()
-# # 
-# # pdf("Risk Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, "Risk Ratio", "1",
-#                    "(D) Risk Ratio")
-# # dev.off()
-# # 
-# # pdf("Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-# #     height = 2, width = 10)
-# create_figure_sens(figure_data2_20pct, "Odds Ratio", "1",
-#                    "(E) Odds Ratio")
-# # dev.off()
-
-```
-
-
-
-
-
-# Figures: Bias by Effect on Miscarriage
-
-Create the functions to output the figures.
-
-```{r eval=FALSE}
-
-create_biasfigure_nosens <- function(dataset, parameter, rr_preec, title){
-  
-  param <- sym(parameter)
-  # rr_abort <- sym(rr_abort)
-  rr_preeclampsia <- sym(rr_preec)
-  
-  plot <- dataset %>%
-    filter(!grepl("Sens", Cohort)) %>% 
-    filter(rr_preec == rr_preeclampsia) %>%
-    filter(parameter == param) %>% 
-    ggplot(aes(x = missing, y = value, color = Cohort, shape = Cohort)) + # , shape = cohort
-    geom_point(size = 3, position = position_dodge(0.5)) +
-    facet_wrap(scenario ~., nrow = 1) +
-    geom_hline(aes(yintercept = 0), col = "black", linetype = "dashed") +
-    # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
-    #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
-    xlab("Approximate Percent Missing Due to Severity|Abortion") + 
-    ylab("Bias") +
-    ggtitle(title) +
-    scale_x_discrete(labels = c(
-      "0/0.05" = "0|5", "0.025/0.025" = "2.5|2.5", "0.05/0" = "5|0",
-      "0/0.2" = "0|20", "0.1/0.1" = "10|10", "0.2/0" = "20|0"
-    )) +
-    theme(legend.title = element_text(size = 8), 
-          legend.text = element_text(size = 8)) +
-    scale_colour_grey() +
-    theme_bw()
-  
-  return(plot)
-  
-}
-
-
-
-create_biasfigure_sens <- function(dataset, parameter, rr_preec, title){
-  
-  param <- sym(parameter)
-  # rr_abort <- sym(rr_abort)
-  rr_preeclampsia <- sym(rr_preec)
-  
-  plot <- dataset %>%
-    # filter(!grepl("Sens", Cohort)) %>% 
-    mutate(Analysis = ifelse(grepl("Sens", Cohort),
-                             "Sensitivity Analysis",
-                             "Primary Analysis")) %>% 
-    filter(rr_preec == rr_preeclampsia) %>%
-    filter(parameter == param) %>% 
-    ggplot(aes(x = missing, y = value, color = Cohort, shape = Analysis)) + # , shape = cohort
-    geom_point(size = 3, position = position_dodge(0.5)) +
-    facet_wrap(scenario ~., nrow = 1) +
-    geom_hline(aes(yintercept = 0), col = "black", linetype = "dashed") + 
-    # ggtitle(bquote(.(param) ~ ": " ~ RR[Abortion] == .(rr_abortion) ~ 
-    #                " and " ~ RR[Preeclampsia] == .(rr_preeclampsia))) +
-    xlab("Approximate Percent Missing Due to Severity|Abortion") + 
-    ylab("Bias") +
-    ggtitle(title) +
-    scale_x_discrete(labels = c(
-      "0/0.05" = "0|5", "0.025/0.025" = "2.5|2.5", "0.05/0" = "5|0",
-      "0/0.2" = "0|20", "0.1/0.1" = "10|10", "0.2/0" = "20|0"
-    )) +
-    scale_colour_grey() +
-    theme_bw()
-  
-  return(plot)
-  
-}
-
-
-```
-
-## Without Sensitivity Analyses
-
-### Initiation Decreases Risk of Preeclampsia
-
-~5% of study participants are LTFU
-
-```{r eval=FALSE}
-
-pdf("Bias Risk - Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct %>% 
-                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
-                         Cohort != "Sens: Untrt Pregnancies Outcome"), 
-              "Risk, Initiators", 
-              "0.5",
-              "(A) Risk, Initiators")
-dev.off()
-
-pdf("Bias Risk - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct%>% 
-                filter(Cohort != "Sens: Trt Pregnancies Outcome" & 
-                         Cohort != "Sens: Untrt Pregnancies Outcome"),
-                "Risk, Non-Initiators", 
-                "0.5",
-                "(B) Risk, Non-Initiators")
-dev.off()
-
-pdf("Bias Risk difference - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Difference", "0.5",
-                     "(C) Risk Difference")
-dev.off()
-
-pdf("Bias Risk ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
-                     "(D) Risk Ratio")
-dev.off()
-
-pdf("Bias Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Odds Ratio", "0.5",
-                     "(E) Odds Ratio")
-dev.off()
-
-
-```
-
-~20% of study participants are LTFU
-
-```{r eval=FALSE}
-
-
-
-pdf("Bias Risk - Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, 
-              "Risk, Initiators", 
-              "0.5",
-              "(A) Risk, Initiators")
-dev.off()
-
-pdf("Bias Risk - Non-Initiators - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct,
-                "Risk, Non-Initiators", 
-                "0.5",
-                "(B) Risk, Non-Initiators")
-dev.off()
-
-pdf("Bias Risk difference - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Difference", "0.5",
-                     "(C) Risk Difference")
-dev.off()
-
-pdf("Bias Risk ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
-                     "(D) Risk Ratio")
-dev.off()
-
-pdf("Bias Odds ratio - Decrease risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, "Odds Ratio", "0.5",
-                     "(E) Odds Ratio")
-dev.off()
-
-```
-
-
-### Initiation Does not Affect Risk of Preeclampsia
-
-~5% of the study population are LTFU.
-
-```{r eval=FALSE}
-
-pdf("Bias Risk - Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct , 
-              "Risk, Initiators", 
-              "1",
-              "(A) Risk, Initiators")
-dev.off()
-
-pdf("Bias Risk - Non-Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct,
-                       "Risk, Non-Initiators", 
-                "1",
-                "(B) Risk, Non-Initiators")
-dev.off()
-
-pdf("Bias Risk difference - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Difference", 
-                     "1", 
-                     "(C) Risk Difference")
-dev.off()
-
-pdf("Bias Risk ratio - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Risk Ratio", "1", 
-                     "(D) Risk Ratio")
-dev.off()
-
-pdf("Bias Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 5pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_5pct, "Odds Ratio", "1", 
-                     "(E) Odds Ratio")
-dev.off()
-
-```
-
-
-~20% of the study population are LTFU.
-
-```{r eval=FALSE}
-
-pdf("Bias Risk - Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, 
-              "Risk, Initiators", 
-              "1",
-              "(A) Risk, Initiators")
-dev.off()
-
-pdf("Bias Risk - Non-Initiators - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct,
-                     "Risk, Non-Initiators", 
-                     "1",
-                     "(B) Risk, Non-Initiators")
-dev.off()
-
-pdf("Bias Risk difference - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Difference", 
-                     "1", 
-                     "(C) Risk Difference")
-dev.off()
-
-pdf("Bias Risk ratio - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, "Risk Ratio", "1", 
-                     "(D) Risk Ratio")
-dev.off()
-
-pdf("Bias Odds ratio - No effect risk of Preeclampsia - No sensitivity analyses - 20pct.pdf",
-    height = 2, width = 10)
-create_biasfigure_nosens(bias_figure_data2_20pct, "Odds Ratio", "1", 
-                     "(E) Odds Ratio")
-dev.off()
-
-```
-
-
-## With Sensitivity Analyses
-
-### Initiation Decreases Risk of Preeclampsia
-
-~5% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# pdf("Bias Risk - Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, 
-              "Risk, Initiators", "0.5",
-              "(A) Risk, Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk - Non-Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct,
-                   "Risk, Non-Initiators", 
-                   "0.5",
-                   "(B) Risk, Non-Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk Difference - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "0.5",
-                   "(C) Risk Difference")
-# dev.off()
-# 
-# pdf("Bias Risk Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "0.5",
-                   "(D) Risk Ratio")
-# dev.off()
-# 
-# pdf("Bias Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, "Odds Ratio", "0.5",
-                   "(E) Odds Ratio")
-# dev.off()
-
-```
-
-~20% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# pdf("Bias Risk - Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, 
-              "Risk, Initiators", "0.5",
-              "(A) Risk, Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk - Non-Initiators - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct,
-                       "Risk, Non-Initiators", "0.5",
-                "(B) Risk, Non-Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk Difference - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "0.5",
-                   "(C) Risk Difference")
-# dev.off()
-# 
-# pdf("Bias Risk Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "0.5",
-                   "(D) Risk Ratio")
-# dev.off()
-# 
-# pdf("Bias Odds Ratio - Decrease risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, "Odds Ratio", "0.5",
-                   "(E) Odds Ratio")
-# dev.off()
-
-```
-
-### Initiation Does not Affect Risk of Preeclampsia
-
-~5% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# pdf("Bias Risk - Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, 
-              "Risk, Initiators", "1",
-              "(A) Risk, Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk - Non-Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct,
-                   "Risk, Non-Initiators", 
-                   "1",
-                   "(B) Risk, Non-Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk Difference - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, "Risk Difference", "1",
-                   "(C) Risk Difference")
-# dev.off()
-# 
-# pdf("Bias Risk Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, "Risk Ratio", "1",
-                   "(D) Risk Ratio")
-# dev.off()
-# 
-# pdf("Bias Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 5pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_5pct, "Odds Ratio", "1",
-                   "(E) Odds Ratio")
-# dev.off()
-
-```
-
-~20% of study participants are LTFU
-
-```{r eval=FALSE}
-
-# pdf("Bias Risk - Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, 
-              "Risk, Initiators", "1",
-              "(A) Risk, Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk - Non-Initiators - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct,
-                       "Risk, Non-Initiators", "1",
-                "(B) Risk, Non-Initiators")
-# dev.off()
-# 
-# pdf("Bias Risk Difference - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, "Risk Difference", "1",
-                   "(C) Risk Difference")
-# dev.off()
-# 
-# pdf("Bias Risk Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, "Risk Ratio", "1",
-                   "(D) Risk Ratio")
-# dev.off()
-# 
-# pdf("Bias Odds Ratio - No effect risk of Preeclampsia - Sensitivity analyses - 20pct.pdf",
-#     height = 2, width = 10)
-create_biasfigure_sens(bias_figure_data2_20pct, "Odds Ratio", "1",
-                   "(E) Odds Ratio")
-# dev.off()
-
-```
-
-
-
-
 
 
