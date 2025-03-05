@@ -15,8 +15,8 @@
 #####################################################
 
 # Test
-# tar_data <- tar_read(cohort_data_0.226_0.8_0_.0.2_7_0.5_0.5_Parameters_Abortion05_Preeclampsia05_EMM.xlsx_1_10000)
-# data <- tar_data %>% 
+# tar_data <- tar_read(cohort_data_0.1_1.3_0.49_.0.2_7_1_0.5_Parameters_Abortion1_Preeclampsia05_EMM.xlsx_1_10000)
+# data <- tar_data %>%
 #   as.data.table()
 # 
 # data <- tar_read(data_prep_0.226_0.8_0_.0.2_7_0.5_0.5_Parameters_Abortion05_Preeclampsia05_EMM.xlsx_1_10000)
@@ -108,7 +108,7 @@ prep_data_for_analysis <- function(data, pnc_wk){
 sev_dist <- function(data){
   
   # Calculate the distribution of severity using data.table syntax
-  severity_dist <- data[, .(prop = .N / nrow(data)), by = severity]
+  severity_dist <- data[, .(prop = .N / nrow(data)), by = .(severity,mage35)]
   
   return(severity_dist)
   
@@ -177,10 +177,10 @@ calculate_risks <- function(dataset, severity_dist){
   # Calculate the risks within strata of treatment and severity using the static variable preeclampsia_pre_miss
   strat_risks <- dataset[, .(
     risk = sum(preeclampsia_pre_miss == 1) / .N
-  ), by = .(trt, severity)]
+  ), by = .(trt, severity, mage35)]
   
   # Merge the severity distribution and calculate the standardized risks
-  merge_sev_prop <- merge(strat_risks, severity_dist, by = "severity", all.x = TRUE)
+  merge_sev_prop <- merge(strat_risks, severity_dist, by = c("severity", "mage35"), all.x = TRUE)
   
   merge_sev_prop[, std_risk := risk * prop]
   
@@ -284,12 +284,13 @@ calculate_aj_risks_sev <- function(dataset, severity_dist) {
   dataset[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
   dataset[, outcome := as.factor(final_pregout_mar_mnar)]
   
-  results <- dataset[, aj_estimator(.SD), by = severity]
+  results <- dataset[, aj_estimator(.SD), by = .(severity, mage35)]
   
   results[, severity := as.numeric(severity)]
+  results[, mage35 := as.numeric(mage35)]
   
   # Left merge the severity distribution onto the risks
-  merge_sev <- merge(results, severity_dist, by = "severity", all.x = TRUE)
+  merge_sev <- merge(results, severity_dist, by = c("severity", "mage35"), all.x = TRUE)
   
   merge_sev[, `:=`(
     risk0_std = risk0 * prop,
@@ -350,10 +351,10 @@ sensitivity_analysis_risks <- function(data, sev_dist){
     risk_untrt_out = sum(preeclampsia_marmnar_immediate_outc_untrt) / .N,
     ## Assume that all missing outcomes do not have an outcome
     risk_no_outc = sum(preeclampsia_marmnar_no_outc) / .N
-  ), by = .(trt, severity)]
+  ), by = .(trt, severity, mage35)]
   
   ## Merge severity distribution
-  merge_sens_anal <- merge(sens_anal_risks, sev_dist, by = "severity", all.x = TRUE)
+  merge_sens_anal <- merge(sens_anal_risks, sev_dist, by = c("severity", "mage35"), all.x = TRUE)
   
   ## Multiply through
   sens_analyses <- merge_sens_anal[, `:=`(
@@ -388,50 +389,6 @@ sensitivity_analysis_risks <- function(data, sev_dist){
 
 
 
-
-
-
-
-
-
-# OLD
-
-# aj_estimator <- function(data_subset) {
-#   
-#   # Run the AJ model
-#   aj <- survfit(Surv(time, outcome) ~ trt, data = data_subset)
-#   
-#   # Extract the summary of the survival fit
-#   mod <- summary(aj)
-#   
-#   # Instead of splitting into separate vectors and then processing, we can use
-#   # data.table's vectorized capabilities to work on the whole summary at once
-#   trt0_index <- which(mod$strata == "trt=0")
-#   trt1_index <- which(mod$strata == "trt=1")
-#   
-#   # Create a data.table in a single step
-#   summod <- data.table(
-#     trt = rep(0:1, c(length(trt0_index), length(trt1_index))),
-#     t = mod$time,
-#     risk = mod$pstate[, 2]
-#   )
-#   
-#   # Since we only need the last risk value for each treatment, use .SD to optimize the selection
-#   summod_wide <- summod[, .(risk = risk[.N]), by = trt]
-#   
-#   # Reshape data to wide format and calculate risk difference and ratio
-#   risks <- dcast(summod_wide, . ~ trt, value.var = "risk")
-#   
-#   # Calculate risk difference and risk ratio directly
-#   risks[, `:=`(
-#     risk0 = `0`,
-#     risk1 = `1`,
-#     rd = `1` - `0`,
-#     rr = `1` / `0`
-#   )]
-#   
-#   return(risks[, .(risk0, risk1, rd, rr)])
-# }
 
 
 

@@ -44,7 +44,7 @@ treatment_effects$param_file = paste0("Parameters_Abortion",
                                       gsub("\\.", "", as.character(treatment_effects$rr_preec)), 
                                       "_EMM.xlsx")
 treatment_effects$n_sim = 1
-treatment_effects$n = 5000000 # 10000 # 
+treatment_effects$n =  5000000 # 200000 # 10000 # 
 
 
 # Create a dataset with the missing data parameters
@@ -53,11 +53,13 @@ missing_params <- data.frame(
                                0, 0.100, 0.20),
   # marginal_p_miss_severity = c(0, 0.025, 0.05,
   #                              0, 0.100, 0.20) * 0.3,
-  beta12 = 1.3, #2.55, 
+  beta12 = 5, #2.55, 
+  beta22 = 4, # ADDED -- beta for missing due to rurality.
   marginal_p_miss_miscarriage = c(4.9 * c(0.05, 0.025, 0,
                                           0.20, 0.100, 0)),
   # Cut it down from 5 so not too large
-  gamma1 = -0.2,
+  # gamma1 = -0.2,
+  gamma1 = 0.8,
   pnc_wk = rep(7)
 )
 
@@ -93,6 +95,7 @@ list(
             generated_data,
             marginal_p_miss_severity = marginal_p_miss_severity,
             beta12 = beta12,
+            beta22 = beta22, # Beta for missing due to maternal age
             marginal_p_miss_miscarriage = marginal_p_miss_miscarriage,
             gamma1 = gamma1,
             pnc_wk = pnc_wk

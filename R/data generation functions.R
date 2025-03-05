@@ -34,8 +34,11 @@ generate_dgm <- function(n_sim, n, param_file,
     n_sim = n_sim,
     n = n, #5000,
     p_sev_dist = c(1/3, 1/3, 1/3), # Even distribution
-    p_trt_sev = c(0.4, 0.50, 0.6),
+    # p_trt_sev = c(0.4, 0.50, 0.6),
+    p_trt_sev = c(0.25, 0.5, 0.75),
     p_indx_pnc = c(0.23, 0.33, 0.44),
+    rrmage_abor = 1.5,
+    ormage_preec = 2,
     potential_preg_trt = potential_preg_trt,
     potential_preg_untrt = potential_preg_untrt,
     potential_preec_untrt = potential_preec_untrt,
@@ -89,6 +92,7 @@ generate_dgm <- function(n_sim, n, param_file,
 ###################################################################################
 
 generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
+                     rrmage_abor, ormage_preec,
                      potential_preg_untrt, potential_preg_trt, 
                      potential_preec_untrt, potential_preec_trt,
                      revised_preg, pnc_prob){
@@ -97,7 +101,6 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
   # We assume that there is an equal distribution across three levels. 
   # Otherwise, this needs to be modified.
   severity_dist = rmultinom(n=1, size=n, prob=p_sev_dist)
-  
   
   ######## GENERATE PEOPLE AND BASELINE VALUES
   
@@ -109,6 +112,9 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     
     # Each individual's ID
     id = 1:n, 
+    
+    # Maternal age less than 35 or ge 35 - ADDED 2.28.25
+    mage35 = rbinom(n=n, size=1, prob = 0.3),
     
     # Generate 0 through 40 gestational weeks - 1 vector
     # This indexed prenatal care encounters, not outcomes. Outcomes occur at 1+ this.
@@ -135,20 +141,31 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     ## Step 2: Untreated
     # preg_outcomes_untrt = purrr::map(severity, ~sample_outcomes_for_id(potential_preg_untrt, .x)),
     
-    preg_outcomes_untrt = purrr::map(
-      severity,
+    preg_outcomes_untrt = purrr::map2(
+      severity, mage35,
       ~ {
         # Subset to the severity level of interest
         # prob_data <- potential_preg_untrt[potential_preg_untrt$severity == sev,] %>% 
         #   select(p_fetaldeath_next, p_livebirth_next, p_contpreg_next)
-        prob_data <- potential_preg_untrt[potential_preg_untrt$severity == .x,][, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
+        prob_data <- potential_preg_untrt[potential_preg_untrt$severity == .x,]
+        
+        # Adjust probabilities if mage35 == 1
+        prob_data$p_fetaldeath_next <- ifelse(.y == 1 & prob_data$gestweek_conception <= 16,
+                                              prob_data$p_fetaldeath_next * rrmage_abor,
+                                              prob_data$p_fetaldeath_next)
+        # Now adjust associated probabilities of continuing pregnancy
+        prob_data$p_contpreg_next <- ifelse(.y == 1 & prob_data$gestweek_conception <= 16,
+                                            1 - prob_data$p_fetaldeath_next - prob_data$p_livebirth_next,
+                                            prob_data$p_contpreg_next)
+        
+        prob_data2 <- prob_data[, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
         
         # Define the potential options to select from
         options <- c("fetaldeath_next", "livebirth_next", "contpreg_next")
         
         # Apply the sampling function to each row of probabilities
         outcomes <- apply(
-          prob_data, 1, function(prob) {
+          prob_data2, 1, function(prob) {
             sample(options, size = 1, prob = prob)
           }
         )
@@ -161,18 +178,29 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     ## Step 3: Treated
     # preg_outcomes_trt = purrr::map(severity, ~sample_outcomes_for_id(potential_preg_trt, .x)),
     
-    preg_outcomes_trt = purrr::map(
-      severity,
+    preg_outcomes_trt = purrr::map2(
+      severity, mage35,
       ~ {
         # Subset to the severity level of interest
-        prob_data <- potential_preg_trt[potential_preg_trt$severity == .x,][, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
+        prob_data <- potential_preg_trt[potential_preg_trt$severity == .x,]
+        
+        # Adjust probabilities if mage35 == 1
+        prob_data$p_fetaldeath_next <- ifelse(.y == 1 & prob_data$gestweek_conception <= 16,
+                                              prob_data$p_fetaldeath_next * rrmage_abor,
+                                              prob_data$p_fetaldeath_next)
+        # Now adjust associated probabilities of continuing pregnancy
+        prob_data$p_contpreg_next <- ifelse(.y == 1 & prob_data$gestweek_conception <= 16,
+                                            1 - prob_data$p_fetaldeath_next - prob_data$p_livebirth_next,
+                                            prob_data$p_contpreg_next)
+        
+        prob_data2 <- prob_data[, c("p_fetaldeath_next", "p_livebirth_next", "p_contpreg_next")]
         
         # Define the potential options to select from
         options <- c("fetaldeath_next", "livebirth_next", "contpreg_next")
         
         # Apply the sampling function to each row of probabilities
         outcomes <- apply(
-          prob_data, 1, function(prob) {
+          prob_data2, 1, function(prob) {
             sample(options, size = 1, prob = prob)
           }
         )
@@ -187,10 +215,16 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     ## Step 4: Untreated
     # preec_outcomes_untrt = purrr::map(severity, ~sample_preeclampsia(potential_preec_untrt, .x)),
     
-    preec_outcomes_untrt = purrr::map(
-      severity,
+    preec_outcomes_untrt = purrr::map2(
+      severity, mage35,
       ~{
         probabilities <- potential_preec_untrt[potential_preec_untrt$severity == .x,]$p_preeclampsia
+        
+        # Add the OR for mage: convert to log odds, add log-transformed OR then exponentiate
+        if(.y == 1){
+          probabiltiies <- exp(log(probabilities/(1-probabilities)) + log(ormage_preec))
+        }
+        
         list(rbinom(n = length(probabilities), size = 1, prob = probabilities))
       }
     ),
@@ -198,10 +232,16 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
     ## Step 5: Treated
     # preec_outcomes_trt = purrr::map(severity, ~sample_preeclampsia(potential_preec_trt, .x)),
     
-    preec_outcomes_trt = purrr::map(
-      severity,
+    preec_outcomes_trt = purrr::map2(
+      severity, mage35,
       ~{
         probabilities <- potential_preec_trt[potential_preec_trt$severity == .x,]$p_preeclampsia
+        
+        # Add the OR for mage: convert to log odds, add log-transformed OR then exponentiate
+        if(.y == 1){
+          probabiltiies <- exp(log(probabilities/(1-probabilities)) + log(ormage_preec))
+        }
+        
         list(rbinom(n = length(probabilities), size = 1, prob = probabilities))
       }
     ),
@@ -222,13 +262,13 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
         results[1:n_NA] <- NA
         results[(n_NA + 1):length(probabilities)] <- 
           ifelse(out[(n_NA + 1):length(out)] == 1, "fetaldeath_next", "livebirth_next")
-
+        
         list(results)
       }
     ),
     
     ##### GENERATE PNC ENCOUNTERS -- Step 7
-  
+    
     # List of indicator variables for PNC encounters
     # We incorporate indexing prenatal encounter later
     # pnc_enc = purrr::map(severity, ~sample_pnc(pnc_prob, .x))
@@ -250,7 +290,7 @@ generate <- function(n_sim, n, p_sev_dist, p_trt_sev, p_indx_pnc,
 
 
 
-      
+
 ###################################################################################
 ### FUNCTION: sample_outcomes_for_id()
 # This function will create the potential pregnancy outcomes based upon 

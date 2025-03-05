@@ -13,6 +13,7 @@
 # data <- tar_data
 # marginal_p_miss_severity <- 0.02825
 # beta12 <- 0.8
+# beta22 <- 2
 # marginal_p_miss_miscarriage <- 0 #0.1225
 # gamma1 <- -0.2
 
@@ -27,11 +28,11 @@
 # missingness parameters.
 #####################################################
 
-generate_cohort <- function(data, marginal_p_miss_severity, beta12, 
+generate_cohort <- function(data, marginal_p_miss_severity, beta12, beta22,
                             marginal_p_miss_miscarriage, gamma1,
                             pnc_wk){
   
-  hold = create_cohort(data, marginal_p_miss_severity, beta12,
+  hold = create_cohort(data, marginal_p_miss_severity, beta12, beta22,
                        marginal_p_miss_miscarriage, 
                        gamma1, pnc_wk)
   
@@ -66,7 +67,7 @@ generate_cohort <- function(data, marginal_p_miss_severity, beta12,
 
 
 
-create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
+create_cohort <- function(dataset, marginal_p_miss_severity, beta12, beta22,
                           marginal_p_miss_miscarriage, 
                           gamma1, pnc_wk){
   
@@ -127,10 +128,13 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
   ## Because the seed is maintained and this is only calculated among the non-initiators, this 
   ## should be the same for all
   
-  # Get the expected value of severity in the missing cohort
+  # Get the expected value of severity in the untreated cohort
   expected_sev = as.double(subset(data, trt == 0) %>% 
                              ungroup() %>% 
                              summarize(avg = mean(severity)))
+  
+  # The expected proportion of the population with maternal age >= 35 at baseline among non-initiators
+  expected_mage = as.double(mean(subset(data, trt == 0)$mage35))
   
   # Calculate the weekly marginal severity for a total marginal probability of marginal_p_miss_severity
   ## Number of weeks between the end of follow-up and pnc_wk
@@ -139,16 +143,20 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
   weekly_prob <- 1 - ((1-marginal_p_miss_severity)^(1/num_weeks))
   
   ## Calculate intercept using balancing intercept for model
-  b0_sev = -log((1/weekly_prob)-1) - (beta12 * expected_sev)
+  b0_sev = -log((1/weekly_prob)-1) - (log(beta12) * expected_sev) - (log(beta22) * expected_mage)
   
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
-  p_sev_beta = c(b0_sev, beta12, 2*beta12)
+  p_sev_beta = c(b0_sev, log(beta12), 2*log(beta12), log(beta22))
   
   # Get the probabilities associated with the betas for each
   # severity level - calculated via logistic regression
-  p_missing_sev = c(logodds_to_p(p_sev_beta[1]),
-                    logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
-                    logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
+  p_missing_sev_l35 = c(logodds_to_p(p_sev_beta[1]),
+                        logodds_to_p(p_sev_beta[1] + p_sev_beta[2]),
+                        logodds_to_p(p_sev_beta[1] + p_sev_beta[3]))
+  # Probability of missing due to measured covariates, severity
+  p_missing_sev_ge35 = c(logodds_to_p(p_sev_beta[1] + p_sev_beta[4]),
+                         logodds_to_p(p_sev_beta[1] + p_sev_beta[2]+ p_sev_beta[4]),
+                         logodds_to_p(p_sev_beta[1] + p_sev_beta[3]+ p_sev_beta[4]))
   
   ## Calculate the betas for the missingness due to miscarriage.
   ## Same logic as missingness due to severity.
@@ -156,12 +164,12 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
                                          ungroup() %>% 
                                          summarize(avg = mean(pregout_t_pre_miss)))
   # Balancing intercept term
-  gamma0 = -log((1/marginal_p_miss_miscarriage)-1) - (gamma1 * expected_ga_miscarriages)
+  gamma0 = -log((1/marginal_p_miss_miscarriage)-1) - (log(gamma1) * expected_ga_miscarriages)
   
   ## Create p_miss_outcome - for logistic regression to determine LTFU due to missing outcome
   ## This is the vector of beta values
   p_miss_outcome = c(gamma0, 
-                     gamma1)
+                     log(gamma1))
   
   # Finally, incorporate/create the missing outcomes
   data2b = data %>% 
@@ -172,7 +180,10 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12,
       ## LTFU by Severity
       
       # Generate missingness probabilities for each person
-      p_missing_by_sev = p_missing_sev[severity+1],
+      p_missing_by_sev = ifelse(mage35 == 1,
+                                p_missing_sev_ge35[severity+1],
+                                p_missing_sev_l35[severity+1]),
+      # p_missing_by_sev = p_missing_sev[severity+1],
       
       # Create a weekly indicator variable for is someone was missing due to severity
       missing_by_sev = purrr::map(p_missing_by_sev, ~rbinom(n = 41, size = 1, prob = .x)),
