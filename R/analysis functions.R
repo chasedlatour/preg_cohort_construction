@@ -107,8 +107,8 @@ prep_data_for_analysis <- function(data, pnc_wk){
 
 sev_dist <- function(data){
   
-  # Calculate the distribution of severity using data.table syntax
-  severity_dist <- data[, .(prop = .N / nrow(data)), by = .(severity,mage35)]
+  # Calculate the distribution of severity and rurality using data.table syntax
+  severity_dist <- data[, .(prop = .N / nrow(data)), by = .(severity,rural)]
   
   return(severity_dist)
   
@@ -174,13 +174,13 @@ calculate_risks <- function(dataset, severity_dist){
   
   # dataset <- tar_data[obs_outcome_mar_mnar == 1]
   
-  # Calculate the risks within strata of treatment and severity using the static variable preeclampsia_pre_miss
+  # Calculate the risks within strata of treatment, severity, and rurality using the static variable preeclampsia_pre_miss
   strat_risks <- dataset[, .(
     risk = sum(preeclampsia_pre_miss == 1) / .N
-  ), by = .(trt, severity, mage35)]
+  ), by = .(trt, severity, rural)]
   
   # Merge the severity distribution and calculate the standardized risks
-  merge_sev_prop <- merge(strat_risks, severity_dist, by = c("severity", "mage35"), all.x = TRUE)
+  merge_sev_prop <- merge(strat_risks, severity_dist, by = c("severity", "rural"), all.x = TRUE)
   
   merge_sev_prop[, std_risk := risk * prop]
   
@@ -284,13 +284,13 @@ calculate_aj_risks_sev <- function(dataset, severity_dist) {
   dataset[, time := ifelse(count > 1, final_pregout_marmnar_tte + jitter, final_pregout_marmnar_tte)]
   dataset[, outcome := as.factor(final_pregout_mar_mnar)]
   
-  results <- dataset[, aj_estimator(.SD), by = .(severity, mage35)]
+  results <- dataset[, aj_estimator(.SD), by = .(severity, rural)]
   
   results[, severity := as.numeric(severity)]
-  results[, mage35 := as.numeric(mage35)]
+  results[, rural := as.numeric(rural)]
   
   # Left merge the severity distribution onto the risks
-  merge_sev <- merge(results, severity_dist, by = c("severity", "mage35"), all.x = TRUE)
+  merge_sev <- merge(results, severity_dist, by = c("severity", "rural"), all.x = TRUE)
   
   merge_sev[, `:=`(
     risk0_std = risk0 * prop,
@@ -351,10 +351,10 @@ sensitivity_analysis_risks <- function(data, sev_dist){
     risk_untrt_out = sum(preeclampsia_marmnar_immediate_outc_untrt) / .N,
     ## Assume that all missing outcomes do not have an outcome
     risk_no_outc = sum(preeclampsia_marmnar_no_outc) / .N
-  ), by = .(trt, severity, mage35)]
+  ), by = .(trt, severity, rural)]
   
   ## Merge severity distribution
-  merge_sens_anal <- merge(sens_anal_risks, sev_dist, by = c("severity", "mage35"), all.x = TRUE)
+  merge_sens_anal <- merge(sens_anal_risks, sev_dist, by = c("severity", "rural"), all.x = TRUE)
   
   ## Multiply through
   sens_analyses <- merge_sens_anal[, `:=`(

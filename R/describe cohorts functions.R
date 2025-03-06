@@ -25,6 +25,10 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       n_high = sum(severity == 2),
       n_high_perc = round(100*n_high/n(), 0),
       
+      # Calcualte the number of rural per category
+      n_rural = sum(rural == 1),
+      n_rural_perc = round(100*n_rural/n(), 0),
+      
       # Preterm birth
       n_preterm_all = sum(pregout_t_pre_miss >= 18 & pregout_t_pre_miss < 35),
       preterm_p = round(100*n_preterm_all / n(), 0),
@@ -91,6 +95,8 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       n_low = paste0(n_low," (", n_low_perc, "%)"),
       n_med = paste0(n_med," (", n_med_perc, "%)"),
       n_high = paste0(n_high," (", n_high_perc, "%)"),
+      # Rurality
+      n_rural = paste0(n_rural, " (", n_rural_perc, "%)"),
       # Preterm birth
       n_preterm_all = paste0(n_preterm_all, " (", preterm_p, "%)"),
       # Pregnancy outcomes
@@ -113,7 +119,7 @@ describe_cohort <- function(dataset, rr_abortion, rr_preec,
       missing_mnar = paste0(missing_mnar, " (", missing_mnar_perc, "%)"),
       missing_mnar_t = paste0(missing_mnar_med, " (", missing_mnar_p25, ", ", missing_mnar_p75, ")") 
     ) %>% 
-    select(trt, n_low, n_med, n_high,
+    select(trt, n_low, n_med, n_high, n_rural,
            n_preterm_all, n_miscarriage_all,
            n_stillbirth_all, n_livebirth_all, miscarriage_t, stillbirth_t, livebirth_t,
            n_preeclampsia, preeclampsia_t, n_preeclampsia_l32,

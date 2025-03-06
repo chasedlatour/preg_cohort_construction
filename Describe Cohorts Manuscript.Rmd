@@ -36,6 +36,7 @@ describe_analytic <- describe %>%
     n_low_num = as.double(str_extract(n_low, "^\\d+")),
     n_med_num = as.double(str_extract(n_med, "^\\d+")),
     n_high_num = as.double(str_extract(n_high, "^\\d+")),
+    n_rural = as.double(str_extract(n_rural, "^\\d+")),
     n_total = n_low_num + n_med_num + n_high_num,
     n_preec = as.double(str_extract(n_preeclampsia, "^\\d+")),
   ) %>% 
@@ -75,13 +76,13 @@ describe_cohorts <- function(describe_subset) {
     mutate(
       missing_mar = format_numbers(missing_mar),
       missing_mnar = format_numbers(missing_mnar),
-      across(c("n_low", "n_med", "n_high", "n_miscarriage_all",
+      across(c("n_low", "n_med", "n_high", "n_rural", "n_miscarriage_all",
                     "n_stillbirth_all", "n_livebirth_all"),
                   ~ format_numbers(.))
     ) %>%
     select(marginal_p_miss_severity, marginal_p_miss_miscarriage,
            missing_mar, missing_mnar, trt,
-           n_low, n_med, n_high, 
+           n_low, n_med, n_high, n_rural,
            n_miscarriage_all, n_stillbirth_all, n_livebirth_all) %>% 
     kbl() %>%
     collapse_rows(col_names = c("pnc_wk", "marginal_p_miss_severity", "marginal_p_miss_miscarriage"),
@@ -671,6 +672,7 @@ intermediate <- describe %>%
     n_med_num = as.double(str_extract(n_med, "^\\d+")),
     n_high_num = as.double(str_extract(n_high, "^\\d+")),
     n_total = n_low_num + n_med_num + n_high_num,
+    n_rural_num = as.double(str_extract(n_rural, "^\\d+")),
     n_miscarriage_num = as.double(str_extract(n_miscarriage_all, "^\\d+")),
     n_stillbirth_num = as.double(str_extract(n_stillbirth_all, "^\\d+")),
     n_livebirth_num = as.double(str_extract(n_livebirth_all, "^\\d+")),

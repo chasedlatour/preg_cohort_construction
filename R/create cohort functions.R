@@ -133,8 +133,8 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12, beta22,
                              ungroup() %>% 
                              summarize(avg = mean(severity)))
   
-  # The expected proportion of the population with maternal age >= 35 at baseline among non-initiators
-  expected_mage = as.double(mean(subset(data, trt == 0)$mage35))
+  # The expected proportion of the population residing in a rural area baseline among non-initiators
+  expected_rural = as.double(mean(subset(data, trt == 0)$rural))
   
   # Calculate the weekly marginal severity for a total marginal probability of marginal_p_miss_severity
   ## Number of weeks between the end of follow-up and pnc_wk
@@ -143,7 +143,7 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12, beta22,
   weekly_prob <- 1 - ((1-marginal_p_miss_severity)^(1/num_weeks))
   
   ## Calculate intercept using balancing intercept for model
-  b0_sev = -log((1/weekly_prob)-1) - (log(beta12) * expected_sev) - (log(beta22) * expected_mage)
+  b0_sev = -log((1/weekly_prob)-1) - (log(beta12) * expected_sev) - (log(beta22) * expected_rural)
   
   # Create p_sev_beta - for logistic regression to determine LTFU due to severity
   p_sev_beta = c(b0_sev, log(beta12), 2*log(beta12), log(beta22))
@@ -180,7 +180,7 @@ create_cohort <- function(dataset, marginal_p_miss_severity, beta12, beta22,
       ## LTFU by Severity
       
       # Generate missingness probabilities for each person
-      p_missing_by_sev = ifelse(mage35 == 1,
+      p_missing_by_sev = ifelse(rural == 1,
                                 p_missing_sev_ge35[severity+1],
                                 p_missing_sev_l35[severity+1]),
       # p_missing_by_sev = p_missing_sev[severity+1],
